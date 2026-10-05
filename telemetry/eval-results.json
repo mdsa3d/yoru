@@ -1,0 +1,179 @@
+{
+ "policy": "telemetry/rival-policy-es-mt3.json",
+ "requested": 200,
+ "bands": {
+  "place": 0.2,
+  "contacts": 0.5,
+  "offroad": 1,
+  "raceTimePct": 4,
+  "wreckRatePP": 3,
+  "rivalDistPct": -5
+ },
+ "tiers": {
+  "rookie": {
+   "heuristic": {
+    "races": 200,
+    "completed": 200,
+    "wrecked": 0,
+    "timeout": 0,
+    "places": [
+     6,
+     7,
+     18,
+     169
+    ],
+    "meanPlace": 3.75,
+    "meanTime": 92.16687500001943,
+    "contactsPerRace": 0.85,
+    "offroadPerRace": 0,
+    "meanBestRivalS": 4597.571368294395,
+    "meanLeadFinish": 80.99909793815482
+   },
+   "net": {
+    "races": 200,
+    "completed": 198,
+    "wrecked": 2,
+    "timeout": 0,
+    "places": [
+     56,
+     38,
+     44,
+     60
+    ],
+    "meanPlace": 2.5454545454545454,
+    "meanTime": 92.88590067342068,
+    "contactsPerRace": 1.955,
+    "offroadPerRace": 0,
+    "meanBestRivalS": 4372.50598848716,
+    "meanLeadFinish": 88.03867370893627
+   },
+   "delta": {
+    "place": -1.2045454545454546,
+    "contacts": 1.105,
+    "offroad": 0,
+    "raceTimePct": 0.7801345910893651,
+    "wreckRatePP": 1,
+    "rivalDistPct": -4.895310192666568
+   },
+   "checks": {
+    "B1_place": true,
+    "B2_contacts": false,
+    "B3_offroad": true,
+    "B4_raceTime": true,
+    "B5_wreckRate": true,
+    "B6_rivalCompetitive": true
+   },
+   "pass": false
+  },
+  "pro": {
+   "heuristic": {
+    "races": 200,
+    "completed": 200,
+    "wrecked": 0,
+    "timeout": 0,
+    "places": [
+     6,
+     7,
+     18,
+     169
+    ],
+    "meanPlace": 3.75,
+    "meanTime": 92.16687500001943,
+    "contactsPerRace": 0.85,
+    "offroadPerRace": 0,
+    "meanBestRivalS": 4597.571368294395,
+    "meanLeadFinish": 80.99909793815482
+   },
+   "net": {
+    "races": 200,
+    "completed": 200,
+    "wrecked": 0,
+    "timeout": 0,
+    "places": [
+     11,
+     17,
+     57,
+     115
+    ],
+    "meanPlace": 3.38,
+    "meanTime": 92.56062500001975,
+    "contactsPerRace": 1.47,
+    "offroadPerRace": 0,
+    "meanBestRivalS": 4459.56972506388,
+    "meanLeadFinish": 84.14977954145924
+   },
+   "delta": {
+    "place": -0.3700000000000001,
+    "contacts": 0.62,
+    "offroad": 0,
+    "raceTimePct": 0.4272142241995739,
+    "wreckRatePP": 0,
+    "rivalDistPct": -3.0016204681932184
+   },
+   "checks": {
+    "B1_place": true,
+    "B2_contacts": false,
+    "B3_offroad": true,
+    "B4_raceTime": true,
+    "B5_wreckRate": true,
+    "B6_rivalCompetitive": true
+   },
+   "pass": false
+  },
+  "elite": {
+   "heuristic": {
+    "races": 200,
+    "completed": 200,
+    "wrecked": 0,
+    "timeout": 0,
+    "places": [
+     6,
+     7,
+     18,
+     169
+    ],
+    "meanPlace": 3.75,
+    "meanTime": 92.16687500001943,
+    "contactsPerRace": 0.85,
+    "offroadPerRace": 0,
+    "meanBestRivalS": 4597.571368294395,
+    "meanLeadFinish": 80.99909793815482
+   },
+   "net": {
+    "races": 200,
+    "completed": 200,
+    "wrecked": 0,
+    "timeout": 0,
+    "places": [
+     6,
+     14,
+     52,
+     128
+    ],
+    "meanPlace": 3.51,
+    "meanTime": 93.221291666687,
+    "contactsPerRace": 1.805,
+    "offroadPerRace": 0,
+    "meanBestRivalS": 4514.400454444407,
+    "meanLeadFinish": 83.59699312716039
+   },
+   "delta": {
+    "place": -0.2400000000000002,
+    "contacts": 0.955,
+    "offroad": 0,
+    "raceTimePct": 1.1440299637666367,
+    "wreckRatePP": 0,
+    "rivalDistPct": -1.8090184401170681
+   },
+   "checks": {
+    "B1_place": true,
+    "B2_contacts": false,
+    "B3_offroad": true,
+    "B4_raceTime": true,
+    "B5_wreckRate": true,
+    "B6_rivalCompetitive": true
+   },
+   "pass": false
+  }
+ }
+}

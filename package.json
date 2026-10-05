@@ -1,0 +1,40 @@
+{
+  "name": "yoru",
+  "version": "4.0.0",
+  "private": true,
+  "type": "module",
+  "description": "YORU — a neon-soaked, no-build Three.js motorcycle and VTOL racer that runs entirely in the browser. Four worlds, six machines, street and sky.",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "bench:sim": "node tools/sim-bench.mjs",
+    "start:laya": "node server.mjs --laya",
+    "setup:laya": "node tools/install-laya.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mdsa3d/yoru.git"
+  },
+  "keywords": [
+    "game",
+    "racing",
+    "motorcycle",
+    "vtol",
+    "three.js",
+    "webgl",
+    "browser-game",
+    "no-build"
+  ],
+  "author": "mdsa3d",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/mdsa3d/yoru/issues"
+  },
+  "homepage": "https://mdsa3d.github.io/yoru/",
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "optionalDependencies": {
+    "@receptron/laya": "0.1.2"
+  }
+}

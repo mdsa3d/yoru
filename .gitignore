@@ -1,0 +1,21 @@
+node_modules/
+.DS_Store
+.asset-work/
+.env
+.env.*
+__pycache__/
+*.pyc
+
+# Local-only telemetry captures (regenerable via tools/gen-dataset.mjs)
+telemetry/*.jsonl
+
+# ES/DAgger training run outputs (regenerable via tools/rl, tools/ai-train)
+tools/rl/out/
+
+# Multi-hundred-KB trained candidate weights, staged locally for the next
+# training iteration (see tools/ai-train/RESUME.md); regenerable, not shipped
+telemetry/rival-policy-bc-final.json
+telemetry/rival-policy-es-pro.json
+telemetry/rival-policy-es-rookie.json
+telemetry/rival-policy-es-mt2.json
+telemetry/rival-policy-es-mt3.json

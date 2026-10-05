@@ -1,0 +1,10 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {BIKES,createState,step,impact} from '../src/physics.js';
+const setup={weather:'dry',tires:'street',gearing:1,assist:1};
+function run(p,seconds,input,bike=BIKES[0],dt=1/120){for(let t=0;t<seconds-1e-8;t+=dt)step(p,input,bike,setup,dt);return p}
+test('all motorcycles accelerate, shift, and stay finite',()=>{for(const b of BIKES){const p=run(createState(),20,{throttle:true,brake:false,steer:0},b);assert.ok(p.v>20,b.name);assert.ok(p.gear>1,b.name);for(const v of Object.values(p))if(typeof v==='number')assert.ok(Number.isFinite(v));}});
+test('brakes stop without reversing',()=>{const p=createState();p.v=40;run(p,10,{brake:true,throttle:false,steer:0});assert.equal(p.v,0)});
+test('simulation nearly independent of render rate',()=>{const a=run(createState(),8,{throttle:true,steer:0},BIKES[0],1/120),b=run(createState(),8,{throttle:true,steer:0},BIKES[0],1/60);assert.ok(Math.abs(a.s-b.s)<1);assert.ok(Math.abs(a.v-b.v)<.3)});
+test('collision damage is bounded and cooldown prevents repeated impact',()=>{const p=createState();p.v=50;assert.equal(impact(p,35),true);assert.ok(p.health>0&&p.health<100);const health=p.health;assert.equal(impact(p,35),false);assert.equal(p.health,health)});
+test('steering is bounded by road and never permits negative health',()=>{const p=run(createState(),100,{throttle:true,steer:1});assert.ok(Math.abs(p.x)<=8.4);assert.ok(p.health>=0)});
+test('rain slicks brake worse than dry slicks',()=>{function distance(weather){let p=createState();p.v=35;for(let i=0;i<500;i++)step(p,{brake:true,steer:0},BIKES[0],{...setup,tires:'slick',weather},1/120);return p.s}assert.ok(distance('rain')>distance('dry')*1.3)});
+test('surface hazards reduce grip without creating invalid state',()=>{const clean=createState(),hazard=createState();clean.v=30;hazard.v=30;for(let i=0;i<120;i++){step(clean,{throttle:false,brake:false,steer:1},BIKES[0],setup,1/120);hazard.surfaceGrip=.48;step(hazard,{throttle:false,brake:false,steer:1},BIKES[0],setup,1/120)}assert.ok(hazard.slip>=clean.slip);assert.ok(Number.isFinite(hazard.v)&&hazard.health>=0)});

@@ -1,0 +1,13 @@
+# Behaviour-cloning toolchain for the rival policy net (UPLIFT-PLAN B4).
+# NumPy-only: a 40->128->128->3 MLP trains fine on CPU; PyTorch is intentionally
+# not required so the image stays small and the run stays reproducible.
+# Build:  podman build -t neon-ai-train -f tools/ai-train/Containerfile .
+# Run:    podman run --rm -v "$PWD":/work -w /work neon-ai-train --help
+FROM python:3.12-slim
+# Networks with TLS interception (corporate proxies): drop the proxy's root CA
+# as a .crt into tools/ai-train/docker-ca/ before building; it is trusted for
+# the pip install. The directory ships empty (verification is never disabled).
+COPY tools/ai-train/docker-ca/ /usr/local/share/ca-certificates/
+RUN update-ca-certificates && pip install --no-cache-dir numpy==2.1.3
+WORKDIR /work
+ENTRYPOINT ["python", "tools/ai-train/train_bc.py"]

@@ -1,0 +1,32 @@
+name: Bug report
+description: Something in YORU is broken or behaving wrong
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, what actually happened.
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU / browser
+      description: e.g. "Apple M4 Pro, Chrome 141" or "RTX 5070 Ti, Firefox 143". Open the browser console for any errors.
+    validations:
+      required: true
+  - type: textarea
+    id: bench
+    attributes:
+      label: Performance numbers (optional)
+      description: For frame-rate/hitch issues, run the game with ?bench=1 appended to the URL and paste the downloaded yoru-bench-*.json here.
+      render: json
+  - type: checkboxes
+    id: repro
+    attributes:
+      label: Reproducibility
+      options:
+        - label: This happens every time I follow the steps above
+        - label: I attached a screenshot or recording (if visual)

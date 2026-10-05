@@ -1,0 +1,19 @@
+YORU
+Copyright 2026 mdsa3d
+
+This product includes software developed by mdsa3d
+(https://github.com/mdsa3d/yoru), licensed under the Apache License,
+Version 2.0 (see LICENSE).
+
+Third-party components bundled with this project retain their own
+licenses and copyright:
+
+- Three.js (MIT) — see vendor/THREE-LICENSE.txt
+- webgl-noise GLSL simplex noise by Ashima Arts / Stefan Gustavson (MIT) —
+  inlined in src/menu-backdrop.js, see the inline comment
+- Kestrel motorcycle chassis (CC0 1.0) — "fancy motorcycle" by Teh_Bucket
+- Kenney Car Kit and Racing Kit traffic/hazard models (CC0 1.0) — Kenney
+
+Full provenance, source URLs and license details for all third-party
+assets are recorded in ASSETS.md. The MIT and CC0 1.0 licenses of these
+components are compatible with this project's Apache-2.0 license.
