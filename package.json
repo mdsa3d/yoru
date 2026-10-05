@@ -32,7 +32,7 @@
   },
   "homepage": "https://mdsa3d.github.io/yoru/",
   "dependencies": {
-    "three": "0.180.0"
+    "three": "0.186.1"
   },
   "optionalDependencies": {
     "@receptron/laya": "0.1.2"
