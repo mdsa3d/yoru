@@ -1,0 +1,10 @@
+{
+  "environment": "Headless Chromium / SwiftShader software renderer; not hardware FPS evidence",
+  "frames": 71,
+  "p50": 216.60000610351562,
+  "p95": 516.5999755859375,
+  "p99": 733.2999877929688,
+  "droppedSeconds": 3.1499999999999986,
+  "calls": 354,
+  "triangles": 78962
+}

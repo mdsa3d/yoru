@@ -1,0 +1,23 @@
+# End of line normalisation for cross-platform contributors.
+* text=auto eol=lf
+
+# Windows launcher keeps CRLF so cmd.exe parses labels/echoes reliably.
+*.bat text eol=crlf
+
+# Binary assets — never normalise or diff as text.
+*.glb binary
+*.gltf binary
+*.bin binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ogg binary
+*.mp3 binary
+*.wav binary
+*.ico binary
+*.zip binary
+*.pyc binary
+
+# Generated weight/telemetry blobs: diff noise, treat as binary.
+telemetry/rival-policy-*.json binary
+assets/ai/*.json binary

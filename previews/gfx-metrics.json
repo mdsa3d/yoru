@@ -1,0 +1,34 @@
+{
+  "environment": "Headless Chromium / SwiftShader software renderer; rAF-to-rAF deltas, NOT hardware FPS evidence",
+  "frames": 24,
+  "scenarios": {
+    "baseline": {
+      "p50": 305.9,
+      "p95": 1303
+    },
+    "shadow-on": {
+      "p50": 274.7,
+      "p95": 455.5
+    },
+    "gtao-on": {
+      "p50": 380.4,
+      "p95": 541.5
+    },
+    "detail-on": {
+      "p50": 302.6,
+      "p95": 375.2
+    },
+    "ssr-on": {
+      "p50": 580.7,
+      "p95": 925.2
+    },
+    "tunnels-off": {
+      "p50": 275.9,
+      "p95": 516.7
+    },
+    "tunnels-on": {
+      "p50": 325.3,
+      "p95": 1593.6
+    }
+  }
+}
