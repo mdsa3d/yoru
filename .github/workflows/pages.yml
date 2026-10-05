@@ -21,7 +21,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Ship only the runtime files: the game is a no-build static site and all
       # fetch/import paths are relative, so it works from the /yoru/ subpath.
       - name: Stage runtime files
