@@ -35,6 +35,6 @@
     "three": "0.180.0"
   },
   "optionalDependencies": {
-    "@receptron/laya": "0.1.2"
+    "@receptron/laya": "0.2.0"
   }
 }
