@@ -1,3 +1,56 @@
+# Unreleased — Blender 3D Asset Redesign & Realistic Simulation (2026-10-31)
+
+- Rebuilt all 6 motorcycles (`kestrel`, `redline`, `ronin`, `ghost`, `outlaw`, `cafe`)
+  in Blender (`tools/blender/generate_motorcycle.py`, `tools/blender/generate_challengers.py`)
+  with sculpted/lofted fairings, spoked wheels, drilled brake rotors, L-Twin/Inline-4/V-Twin
+  engines, 3D Bezier tubular exhaust headers, reactive `brake-light` nodes, and 1st-person
+  `cockpit` assemblies.
+- Rebuilt `assets/models/rider/pilot.glb` (`tools/blender/generate_human.py`) with
+  sculpted anatomical limb/armor hierarchy (`torso`, `head`, `upper-arm`, `forearm`,
+  `thigh`, `shin`, `elbow-pad`, `knee-pad`, `gauntlet`, `boot`) and wired `loadRider()`
+  into `src/rider.js` with knee turn-out, horizon-leveling head roll, and grip anchoring.
+- Rebuilt highway traffic (`sedan.glb`, `van.glb`, `taxi.glb`) and autonomous aerial eVTOL
+  drones (`drone.glb`) in `tools/blender/generate_cars.py` with contoured bodies, glasshouses,
+  separate 5-spoke wheel nodes (`wheel-fl..rr`), and spinning rotor nodes (`rotor-0..3`).
+- Rebuilt world & hazard assets in `tools/blender/generate_world.py`: space-frame truss
+  highway gantry (`gantry.glb`), curtain-wall skyscraper (`tower.glb`), F-profile concrete
+  Jersey barrier (`barrier.glb`), 3 road debris variants (`debris.glb`: concrete slab with
+  rebar, wrecked radial tire/rim, crushed cargo crate), and highway props (`props.glb`:
+  `streetlamp`, `pylon`).
+- Enabled physical rival simulation (`driveRival` + `stepVehicle`) by default, dynamic
+  chassis pitch squat/dive, front-wheel steering angle, reactive brake lights on bikes
+  and traffic, and 1st-person cockpit view visibility.
+- Validation: 165 unit tests (`npm test`), including comprehensive glTF/GLB hierarchy,
+  material, and vertex checks in `tests/blender-assets.test.mjs`.
+
+# Unreleased — 3D showcase slice (2026-10-06)
+
+- Dedicated garage stage with baked studio reflections, cyan rim lighting, a display
+  platform and a desktop split layout that keeps the selected motorcycle visible.
+- Kestrel mechanical details and a reusable articulated rider for all six bikes:
+  lean, speed tuck, braking posture, helmet motion and hands anchored to the grips.
+- Seeded, continuously streamed desert/alpine terrain with layered noise, desert
+  strata, slope-aware rock/sand/snow colors and a clear road corridor. No new runtime
+  dependency or imported asset; terrain is scenery and does not change riding physics.
+- Validation: 160 unit tests, responsive UI browser checks and showroom/world transition
+  browser smoke. Software rendering does not establish target-device frame rates.
+
+# Unreleased — Horizon upgrade (2026-10-06)
+
+- Cinematic menu and garage, lime/cyan accents, grouped setup controls, clearer HUD,
+  world cards and pause/results panels; desktop and phone layouts, visible keyboard
+  focus, reduced motion, dialog Tab navigation and Escape from garage form controls.
+- Neural inference packs each output's weights contiguously. Exact output parity on
+  100 vectors; local Node CPU median forward time fell 28.8% (not a browser FPS claim).
+- Fresh v2 BC/DAgger training on 192 generated heuristic-expert races (531,930 frames),
+  followed by 20 multi-tier ES generations. Best model selection now preserves an
+  earlier validated mean when later training regresses, including across resume.
+- Acceptance evaluation can run tiers in parallel and save separate reports; metrics
+  and acceptance bands remain unchanged. Details and results: docs/HORIZON-UPGRADE.md.
+- Full 200-race-per-tier gate: Elite passes; Rookie fails contact/pace and Pro fails
+  contact. Candidate retained locally; the default heuristic is unchanged.
+- Validation: 154 unit tests, existing gameplay browser smoke and new Horizon UI smoke.
+
 # 4.0.0 — Yoru
 
 **The project is renamed from Neon Rash to Yoru** (github.com/mdsa3d/yoru) and relicensed from MIT to **Apache-2.0** (see LICENSE, NOTICE; third-party MIT/CC0 components keep their own licenses — both are Apache-compatible). User-visible naming updated (page title, menu brand, dev-server banner, START scripts, downloaded bench/telemetry filenames). Saved-data compatibility is fully preserved: all `localStorage` keys (`neon-rash-setup`, `neon-rash-v3-records`, `neon-rash-v3-skill`, `neon-rash-v3-telemetry`, `neon-rash-v3-rival-physics`) and the `neon-rash-mlp@1/@2` weight-format tags are unchanged, so existing records, garage setups and policy weights keep working. No gameplay change.

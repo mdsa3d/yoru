@@ -8,9 +8,9 @@ import {FXAAPass} from 'three/addons/postprocessing/FXAAPass.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {SSRPass} from 'three/addons/postprocessing/SSRPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-import {makeBike,animateBike,disposeModel,makeImportedCar,makeImportedHazard,box,ball,rod,batch,neon,black,metal,rubber} from './models.js';
+import {makeBike,animateBike,disposeModel,makeImportedCar,makeImportedDrone,animateTrafficVehicle,makeImportedHazard,getDebrisAsset,box,ball,rod,batch,neon,black,metal,rubber} from './models.js';
 import {Environment} from './environment.js';
-import {MenuBackdrop} from './menu-backdrop.js';
+import {Studio} from './studio.js';
 import {getWorld,random,headlightParams,fitSunShadow} from './world-data.js';
 import {TUNNEL,tunnelEnclosure,tunnelSections} from './tunnel.js';
 import {road,slope} from './physics.js';
@@ -66,18 +66,27 @@ const debrisShape=h=>Math.floor(random(parseInt(h.id.split('-')[1]))*3);
 // Closure hazards keep child lamps/barriers and stay individual meshes; oil/puddle/debris render as InstancedMesh pools.
 function makeHazard(h,shadowTex){
  const g=new T.Group();
- const mat=new T.MeshStandardMaterial({color:0xff7b55,roughness:.5,metalness:0,emissive:0xff7b55,emissiveIntensity:2.4});
- const m=new T.Mesh(new T.BoxGeometry(h.width,.65,h.depth),mat);m.position.y=.35;g.add(m);
- for(const x of [-h.width*.34,h.width*.34]){const lamp=new T.Mesh(new T.SphereGeometry(.09,8,8),neon('#ff526d',4.2));lamp.position.set(x,.75,0);g.add(lamp)}
- const barrier=makeImportedHazard('barrier');if(barrier){barrier.scale.setScalar(3.5);barrier.position.set(-h.width*.25,.325,h.depth*.12);g.add(barrier)}
- const fence=makeImportedHazard('fence');if(fence){fence.scale.setScalar(2.2);fence.position.set(h.width*.15,.325,-h.depth*.12);g.add(fence)}
+ const barrierL=makeImportedHazard('barrier'),barrierR=makeImportedHazard('barrier'),fence=makeImportedHazard('fence');
+ if(barrierL&&barrierR){
+  barrierL.scale.setScalar(.85);barrierL.position.set(-h.width*.24,0,h.depth*.14);g.add(barrierL);
+  barrierR.scale.setScalar(.85);barrierR.position.set(h.width*.24,0,h.depth*.14);g.add(barrierR);
+  if(fence){fence.scale.setScalar(2.1);fence.position.set(0,0,-h.depth*.16);g.add(fence)}
+ }else{
+  const mat=new T.MeshStandardMaterial({color:0xff7b55,roughness:.5,metalness:0,emissive:0xff7b55,emissiveIntensity:2.4});
+  const m=new T.Mesh(new T.BoxGeometry(h.width,.65,h.depth),mat);m.position.y=.35;g.add(m);
+ }
+ for(const x of [-h.width*.34,h.width*.34]){const lamp=new T.Mesh(new T.SphereGeometry(.09,8,8),neon('#ff526d',4.2));lamp.position.set(x,1.18,h.depth*.14);g.add(lamp)}
  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});return g;
 }
 function makeHazardPool(h,key,tex,cap){
  let geo,mat,y,sx=h.width,sz=h.depth;
  if(key==='oil'||key==='puddle'){geo=new T.PlaneGeometry(1,1);geo.rotateX(-Math.PI/2);y=.035;mat=new T.MeshPhysicalMaterial({color:key==='oil'?0x141b2b:0x4e9bad,roughness:.04,metalness:0,clearcoat:1,clearcoatRoughness:.02,transparent:true,opacity:key==='oil'?.78:.5,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,map:key==='oil'?tex.oil:tex.puddle,alphaMap:tex.shadow});
- }else{mat=new T.MeshStandardMaterial({color:0x6f6a5e,roughness:.68,metalness:0,flatShading:true});
-  if(key==='debris1'){geo=new T.ConeGeometry(.3,.5,5);y=.25;sx=h.width/.8;sz=h.depth/1.1}else if(key==='debris2'){geo=new T.SphereGeometry(.32,10,8);geo.scale(1,.45,1);y=.16;sx=h.width/.8;sz=h.depth/1.1}else{geo=new T.BoxGeometry(1,.65,1);y=.325}}
+ }else{
+  const dAsset=getDebrisAsset(key);
+  if(dAsset){geo=dAsset.geo.clone();mat=dAsset.mat.clone();y=.02;sx=1.15;sz=1.15}
+  else{mat=new T.MeshStandardMaterial({color:0x6f6a5e,roughness:.68,metalness:0,flatShading:true});
+   if(key==='debris1'){geo=new T.ConeGeometry(.3,.5,5);y=.25;sx=h.width/.8;sz=h.depth/1.1}else if(key==='debris2'){geo=new T.SphereGeometry(.32,10,8);geo.scale(1,.45,1);y=.16;sx=h.width/.8;sz=h.depth/1.1}else{geo=new T.BoxGeometry(1,.65,1);y=.325}}
+ }
  const mesh=new T.InstancedMesh(geo,mat,cap);mesh.count=0;mesh.frustumCulled=false;mesh.castShadow=true;mesh.receiveShadow=true;return {mesh,y,sx,sz};
 }
 export class World{
@@ -86,6 +95,7 @@ export class World{
   this.renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});this.maxRatio=Math.min(devicePixelRatio,1.75);this.renderer.setPixelRatio(this.maxRatio);this.renderer.setSize(innerWidth,innerHeight);this.renderer.toneMapping=T.NeutralToneMapping;this.renderer.toneMappingExposure=1.05;
   this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;this.scene.add(this.camera);
   this.pmrem=new T.PMREMGenerator(this.renderer);this.envTarget=null;
+  this.studio=new Studio(this.scene);const room=new RoomEnvironment();this.studioEnv=this.pmrem.fromScene(room,.04);room.dispose();
   this.hemi=new T.HemisphereLight(0xc8e0ef,0x39404a,1.5);this.scene.add(this.hemi);
   this.sun=new T.DirectionalLight(0xfff2de,3);this.sun.castShadow=true;this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-28,right:28,top:26,bottom:-26,near:1,far:170});this.sun.shadow.bias=-.00012;this.sun.shadow.normalBias=.018;this.scene.add(this.sun);this.scene.add(this.sun.target);
   this.rim=new T.DirectionalLight(0x83caff,1);this.rim.position.set(10,8,12);this.scene.add(this.rim);
@@ -165,14 +175,14 @@ export class World{
   this.sunDir=[50,-(35+this.world.sunY*50),-30];this.tunnelArch.material.color.set(this.world.terrain);this.tunnelStrip.material.emissive.set(this.world.accent);
   const grade=this.world.grade;this.grade.uniforms.uLift.value.set(...grade.lift);this.grade.uniforms.uGain.value.set(...grade.gain);this.grade.uniforms.uSat.value=grade.sat;ditherPalette(this.world).forEach((rgb,i)=>this.grade.uniforms.uPalette.value[i].set(...rgb));
   const skyScene=new T.Scene();const sky=this.environment.sky;skyScene.add(sky);const env=this.pmrem.fromScene(skyScene);skyScene.remove(sky);this.environment.root.add(sky);if(this.envTarget){this.envTarget.texture.dispose();this.envTarget.dispose()}this.envTarget=env;this.scene.environment=this.envTarget.texture;
-  this.initialized=false;this.backdrop?.setWorld(this.world);this.warmup()}
+  this.initialized=false;this.studio.setWorld(this.world);this.warmup()}
  // Precompile every shader program reachable in the current scene (3.19.1): lazy first-use compilation
  // is the classic tunnel-entry / first-visibility hitch. With the light count held constant (see
  // tunnelLightLevel) one compile covers every program variant the frame loop can hit; new actors call
  // this again from setActors. GPU-only side effect — not Node-testable (CLAUDE.md visual/render exception).
  warmup(){try{this.renderer.compile(this.scene,this.camera)}catch{}}
  setBike(bike,color){this.bike=bike;this.scene.remove(this.player);disposeModel(this.player);this.player=makeBike(bike,color);this.scene.add(this.player)}
- setActors(rivals,traffic,bikes,drones=[],hazards=[]){for(const m of [...this.rivals,...this.traffic,...this.drones,...this.hazards]){if(m){this.scene.remove(m);disposeModel(m)}}for(const k in this.hazardPools){const p=this.hazardPools[k];this.scene.remove(p.mesh);p.mesh.dispose();p.mesh.geometry.dispose();p.mesh.material.dispose()}this.hazardPools={};this.hazardData=hazards;this.rivals=rivals.map((a,i)=>{const m=makeBike(bikes[(i+1)%bikes.length],bikes[(i+1)%bikes.length].color);this.scene.add(m);return m});this.traffic=traffic.map((a,i)=>{let m=useImportedTraffic(i)?makeImportedCar(i):makeCar(i);if(!m){m=makeCar(i);m.userData.importedFallback=true}this.scene.add(m);return m});this.drones=drones.map((a,i)=>{const m=makeDrone(i+1);this.scene.add(m);return m});
+ setActors(rivals,traffic,bikes,drones=[],hazards=[]){for(const m of [...this.rivals,...this.traffic,...this.drones,...this.hazards]){if(m){this.scene.remove(m);disposeModel(m)}}for(const k in this.hazardPools){const p=this.hazardPools[k];this.scene.remove(p.mesh);p.mesh.dispose();p.mesh.geometry.dispose();p.mesh.material.dispose()}this.hazardPools={};this.hazardData=hazards;this.rivals=rivals.map((a,i)=>{const m=makeBike(bikes[(i+1)%bikes.length],bikes[(i+1)%bikes.length].color);this.scene.add(m);return m});this.traffic=traffic.map((a,i)=>{let m=makeImportedCar(i);if(!m){m=makeCar(i);if(useImportedTraffic(i))m.userData.importedFallback=true}this.scene.add(m);return m});this.drones=drones.map((a,i)=>{const m=makeImportedDrone(i)||makeDrone(i+1);this.scene.add(m);return m});
   const counts={};for(const h of hazards)if(h.type!=='closure'){const k=h.type==='debris'?'debris'+debrisShape(h):h.type;counts[k]=(counts[k]||0)+1}
   const tex={shadow:this.shadowTex,oil:this.oilTex,puddle:this.puddleTex};
   this.hazards=hazards.map(h=>{if(h.type==='closure'){const m=makeHazard(h,this.shadowTex);this.scene.add(m);return m}const k=h.type==='debris'?'debris'+debrisShape(h):h.type;if(!this.hazardPools[k]){this.hazardPools[k]=makeHazardPool(h,k,tex,counts[k]);this.scene.add(this.hazardPools[k].mesh)}return null});this.warmup()}
@@ -189,8 +199,10 @@ export class World{
   if(this.ssr)this.ssr.enabled=setup.quality==='high'&&this.flags.ssr==='on';
   this.environment.setDetailMaps(effects&&this.flags.detail==='on'&&(setup.quality!=='auto'||this.tier.detail));
   const menu=mode==='menu',s=menu?650:p.s,rx=road(s),air=menu?setup.launch==='flight':p.flight||p.landing;
-  if(menu&&!this.backdrop){this.backdrop=new MenuBackdrop(this.scene,this.camera);this.backdrop.setWorld(this.world);this.backdrop.quality=setup.quality}
-  if(this.backdrop){this.backdrop.quality=setup.quality;if(menu){this.backdrop.update(dt,clock,effects);this.backdrop.setVisible(true)}else this.backdrop.setVisible(false)}
+  this.studio.setVisible(menu);this.environment.root.visible=!menu;this.scene.fog=menu?null:this.scene.fog;
+  if(!menu&&this.wasStudio)this.scene.fog=new T.FogExp2(this.world.fog,this.world.fogDensity);this.wasStudio=menu;
+  this.scene.environment=menu?this.studioEnv.texture:this.envTarget.texture;this.scene.background.set(menu?'#070e18':this.world.skyBottom);
+  if(this.player.userData.rider)this.player.userData.rider.visible=!menu;
   this.environment.fx=effects;this.environment.update(s,clock,setup.quality==='auto'&&!this.tier.effects?{...setup,quality:'low'}:setup,air);this.conversion+=(Number(air)-this.conversion)*(1-Math.exp(-dt*4));
   const y=menu?(air?1.8:0):p.y||0;const x=menu?1.3:p.x;
   this.player.scale.setScalar(menu?(innerWidth<650?1:1.22):1);
@@ -199,15 +211,15 @@ export class World{
   const cockpit=!menu&&this.cameraMode===1&&!!this.player.userData.cockpit?.length;
   if(cockpit!==this.cockpitView||this.player!==this.cockpitBike){this.cockpitView=cockpit;this.cockpitBike=this.player;this.player.traverse(o=>{if(o.isMesh)o.visible=!cockpit||!!o.userData.cockpit})}
   this.player.visible=(p.invulnerable<=0||Math.floor(clock*12)%2===0)&&(menu||this.cameraMode!==1||cockpit);
-  animateBike(this.player,{speed:p.v,flight:this.conversion,boost:p.boosting,time:clock,dt});
+  animateBike(this.player,{speed:p.v,flight:this.conversion,boost:p.boosting,time:clock,dt,lean:p.lean,accel:p.accel});
   const place=(a,m)=>{const z=s-a.s;m.visible=z>-(setup.quality==='low'?230:420)&&z<45;m.position.set(road(a.s)-rx+a.x,a.y||0,z);m.rotation.y=-Math.atan(slope(a.s))};
   const sl=Math.hypot(50,30),sdx=50/sl,sdz=-30/sl;let shadowN=0;
   const shadow=(a,m,w,d)=>{const ay=a.y||0;if(!m.visible||ay>=6||shadowN>=48)return;const sc=1+ay*.06;this.skidQ.identity();this.skidV.set(m.position.x+sdx*ay*.35,.022,m.position.z+sdz*ay*.35);this.skidM4.compose(this.skidV,this.skidQ,this.hazS.set(w*sc,1,d*sc));this.shadowMesh.setMatrixAt(shadowN,this.skidM4);this.shadowAlpha.setX(shadowN,1/(1+ay*.09));shadowN++};
   const wet=setup.weather==='rain',onRoad=!menu&&!p.flight&&!p.landing,slipping=p.slip>.12||p.accel<-8||p.surfaceGrip<.9;
-  rivals.forEach((a,i)=>{const m=this.rivals[i];if(!m)return;place(a,m);m.rotation.z=a.lean||0;if(m.visible)animateBike(m,{speed:a.v,flight:(a.y||0)>1?1:0,time:clock,dt});shadow(a,m,2.4,4.4);if(!menu&&(a.y||0)<.2&&Math.abs(a.vx||0)>3.4&&Math.abs(a.s-(this.skidRivalS[i]??-9))>.9){this.skidRivalS[i]=a.s;this.skids.push({s:a.s,x:a.x,rot:-Math.atan(slope(a.s)),alpha:wet?.15:.3});if(this.skids.length>160)this.skids.shift()}});traffic.forEach((a,i)=>{if(this.traffic[i]){place(a,this.traffic[i]);shadow(a,this.traffic[i],2.9,5.4)}});drones.forEach((a,i)=>{if(this.drones[i]){place(a,this.drones[i]);shadow(a,this.drones[i],2.9,5.4)}});this.shadowMesh.count=shadowN;if(shadowN){this.shadowMesh.instanceMatrix.needsUpdate=true;this.shadowAlpha.needsUpdate=true}
+  rivals.forEach((a,i)=>{const m=this.rivals[i];if(!m)return;place(a,m);m.rotation.x=a.pitch||0;m.rotation.z=a.lean||0;if(m.visible)animateBike(m,{speed:a.v,flight:(a.y||0)>1?1:0,time:clock,dt,lean:a.lean,accel:a.accel});shadow(a,m,2.4,4.4);if(!menu&&(a.y||0)<.2&&Math.abs(a.vx||0)>3.4&&Math.abs(a.s-(this.skidRivalS[i]??-9))>.9){this.skidRivalS[i]=a.s;this.skids.push({s:a.s,x:a.x,rot:-Math.atan(slope(a.s)),alpha:wet?.15:.3});if(this.skids.length>160)this.skids.shift()}});traffic.forEach((a,i)=>{if(this.traffic[i]){place(a,this.traffic[i]);if(this.traffic[i].visible)animateTrafficVehicle(this.traffic[i],a,dt,clock);shadow(a,this.traffic[i],2.9,5.4)}});drones.forEach((a,i)=>{if(this.drones[i]){place(a,this.drones[i]);if(this.drones[i].visible)animateTrafficVehicle(this.drones[i],a,dt,clock);shadow(a,this.drones[i],2.9,5.4)}});this.shadowMesh.count=shadowN;if(shadowN){this.shadowMesh.instanceMatrix.needsUpdate=true;this.shadowAlpha.needsUpdate=true}
   {const hc={};this.hazardData.forEach((h,i)=>{const z=s-h.s,vis=z>-(setup.quality==='low'?180:320)&&z<120,m=this.hazards[i];if(m){m.visible=vis;if(vis)m.position.set(road(h.s)-rx+h.x,0,z);return}if(!vis)return;const k=h.type==='debris'?'debris'+debrisShape(h):h.type,pool=this.hazardPools[k],n=hc[k]||0;hc[k]=n+1;this.skidQ.identity();this.skidV.set(road(h.s)-rx+h.x,pool.y,z);this.skidM4.compose(this.skidV,this.skidQ,this.hazS.set(pool.sx,1,pool.sz));pool.mesh.setMatrixAt(n,this.skidM4)});for(const k in this.hazardPools){const pool=this.hazardPools[k];pool.mesh.count=hc[k]||0;if(pool.mesh.count)pool.mesh.instanceMatrix.needsUpdate=true}}
   let targetPos,targetLook;
-  if(menu){const small=innerWidth<650;targetPos=new T.Vector3(small?7.5:7.8,small?3.2:2.8,7.1);targetLook=new T.Vector3(small?.7:-2.25,air?2:1.5,-1);this.camera.fov=small?57:48;
+  if(menu){const small=innerWidth<650;targetPos=new T.Vector3(small?7.5:7.8,small?3.2:2.8,7.1);targetLook=new T.Vector3(small?.7:(innerWidth>=1100?-7:-2.25),air?2:1.5,-1);this.camera.fov=small?57:48;
    this.pointerEase.x+=(this.pointer.x-this.pointerEase.x)*(1-Math.exp(-dt*4));this.pointerEase.y+=(this.pointer.y-this.pointerEase.y)*(1-Math.exp(-dt*4));
    const driftX=Math.sin(clock*.14)*.4+Math.sin(clock*.05+2.1)*.18,driftY=Math.sin(clock*.11+1.3)*.12;
    targetPos.x+=this.pointerEase.x*.6+driftX;targetPos.y+=-this.pointerEase.y*.25+driftY;targetPos.z+=this.pointerEase.x*.15}
@@ -227,10 +239,11 @@ export class World{
   // LightProbe is unnecessary — scaling the baked PMREM environmentIntensity is the same irradiance
   // signal), and one shadowless PointLight follows the player as cheap interior lighting.
   const enc=!menu&&this.flags.tunnels==='on'?tunnelEnclosure(p.s):0;
-  this.hemi.intensity=this.world.ambient*(1-.72*enc);this.sun.intensity=this.world.sunPower*(1-.85*enc);this.scene.environmentIntensity=(this.world.kind==='city'?.9:1)*(1-.6*enc);
+  this.hemi.intensity=this.world.ambient*(1-.72*enc);this.sun.intensity=this.world.sunPower*(1-.85*enc);this.scene.environmentIntensity=menu?.8:(this.world.kind==='city'?.9:1)*(1-.6*enc);
+  if(menu){this.hemi.intensity=.45;this.sun.intensity=.8;this.rim.intensity=.3;this.tunnelArch.visible=false;this.tunnelStrip.visible=false}else{this.rim.intensity=this.world.kind==='city'?.45:.22;this.tunnelArch.visible=true;this.tunnelStrip.visible=true}
   this.tunnelLight.intensity=180*tunnelLightLevel(enc,effects);this.tunnelLight.position.set(x,10,-6);
-  this.fill.position.set(x-2,y+4,3);this.headlight.position.set(x,y+1.2,-1.2);this.headlight.target.position.set(x,y-.4,-30);this.lightShaft.material.opacity=.05*(setup.weather==='rain'?1:.4);
-  this.rain.visible=setup.weather==='rain'&&effects;this.rain.position.set(x,y,0);this.splashPoints.position.set(x,y,0);if(this.rain.visible){const a=this.rainGeometry.attributes.position.array,len=1.1+Math.min(2.2,p.v*.012);for(let i=0;i<a.length;i+=6){a[i+1]-=dt*24;a[i+4]-=dt*24;a[i]+=p.vx*dt*.4;a[i+3]+=p.vx*dt*.4;a[i+2]+=p.v*dt*.55;a[i+5]+=p.v*dt*.55;if(a[i+1]<-3){a[i+1]=42;a[i+4]=42-len;const j=this.splashes.findIndex(k=>k.life<=0);if(j>=0){const k=this.splashes[j];k.max=k.life=.15+Math.random()*.1;this.splashPoints.geometry.attributes.position.setXYZ(j,a[i],.02,a[i+2])}}if(a[i+2]>45){a[i+2]=-55;a[i+5]=-55}}this.rainGeometry.attributes.position.needsUpdate=true}
+  this.fill.position.set(x-2,y+4,3);this.headlight.position.set(x,y+1.2,-1.2);this.headlight.target.position.set(x,y-.4,-30);this.lightShaft.material.opacity=menu?0:.05*(setup.weather==='rain'?1:.4);this.headlight.visible=!menu;this.fill.visible=!menu;
+  this.rain.visible=!menu&&setup.weather==='rain'&&effects;this.rain.position.set(x,y,0);this.splashPoints.position.set(x,y,0);if(this.rain.visible){const a=this.rainGeometry.attributes.position.array,len=1.1+Math.min(2.2,p.v*.012);for(let i=0;i<a.length;i+=6){a[i+1]-=dt*24;a[i+4]-=dt*24;a[i]+=p.vx*dt*.4;a[i+3]+=p.vx*dt*.4;a[i+2]+=p.v*dt*.55;a[i+5]+=p.v*dt*.55;if(a[i+1]<-3){a[i+1]=42;a[i+4]=42-len;const j=this.splashes.findIndex(k=>k.life<=0);if(j>=0){const k=this.splashes[j];k.max=k.life=.15+Math.random()*.1;this.splashPoints.geometry.attributes.position.setXYZ(j,a[i],.02,a[i+2])}}if(a[i+2]>45){a[i+2]=-55;a[i+5]=-55}}this.rainGeometry.attributes.position.needsUpdate=true}
   {const at=this.sparkPoints.geometry.attributes,pa=at.position.array,ca=at.color.array;let live=0;for(let i=0;i<96;i++){const k=this.sparks[i];if(k.life<=0)continue;k.life-=dt;if(k.life<=0){pa[i*3+1]=-1e4;ca[i*3]=ca[i*3+1]=ca[i*3+2]=0;continue}k.vy-=dt*k.grav;pa[i*3]+=k.vx*dt;pa[i*3+1]+=k.vy*dt;pa[i*3+2]+=k.vz*dt;const f=Math.min(1,k.life*2.5);ca[i*3]=k.r*f;ca[i*3+1]=k.g*f;ca[i*3+2]=k.b*f;live++}if(live||this.sparkPoints.visible){at.position.needsUpdate=true;at.color.needsUpdate=true;this.sparkPoints.visible=live>0}}
   if(effects&&onRoad&&slipping){this.smokeAcc+=dt*Math.min(60,12+p.slip*260);const at=this.smokePoints.geometry.attributes;while(this.smokeAcc>=1){this.smokeAcc--;const i=this.smoke.findIndex(k=>k.life<=0);if(i<0)break;const k=this.smoke[i];k.max=k.life=.9+Math.random()*.7;k.vx=(Math.random()-.5)*1;k.vy=.35+Math.random()*.55;k.vz=2.5+p.v*.06;at.position.setXYZ(i,p.x+Math.sin(p.lean)*.25,.06,1.02)}}
   this.smokePoints.material.color.set(wet?0x8fa6b0:0xb9c3c9);

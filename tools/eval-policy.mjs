@@ -16,17 +16,22 @@
 // Only if all bands pass may main.js point setup.rivalBrain='net' at the BC weights.
 //
 // Run: node tools/eval-policy.mjs [--policy assets/ai/rival-policy-bc.json] [--races 200]
+//      [--parallel] [--out telemetry/eval-results.json]
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {dirname} from 'node:path';
 import {BIKES,clamp} from '../src/physics.js';
 import {WORLDS} from '../src/world-data.js';
 import {createSim,resetSim,stepSim,SIM_STEP} from '../src/sim.js';
 import {loadMLP} from '../src/mlp.js';
+import {Worker,isMainThread,parentPort,workerData} from 'node:worker_threads';
 
 const BANDS={place:.20,contacts:.50,offroad:1.0,raceTimePct:4,wreckRatePP:3,rivalDistPct:-5};
 const args=Object.fromEntries(process.argv.slice(2).map((a,i,all)=>a.startsWith('--')?[a.slice(2),all[i+1]&&!all[i+1].startsWith('--')?all[i+1]:true]:null).filter(Boolean));
 const POLICY=String(args.policy??'assets/ai/rival-policy-bc.json');
 const N=Number(args.races??200);
 const MAX_TIME=Number(args['max-time']??150);
+const OUT=String(args.out??'telemetry/eval-results.json');
+if(!Number.isInteger(N)||N<1||!Number.isFinite(MAX_TIME)||MAX_TIME<=0)throw new Error('eval: races must be a positive integer and max-time must be positive');
 const net=loadMLP(readFileSync(new URL('../'+POLICY,import.meta.url),'utf8'));
 
 // Same scripted auto-driver as tools/gen-dataset.mjs (kept copy: tools stay self-contained).
@@ -71,14 +76,24 @@ function summarize(rows){
   meanBestRivalS:mean(rows.map(r=>r.bestRivalS)),meanLeadFinish:mean(rows.filter(r=>r.leadFinish!==null).map(r=>r.leadFinish))};
 }
 
+function evaluateTier(tier){
+ const cards=Array.from({length:N},(_,c)=>c);
+ return {H:summarize(cards.map(c=>race('physical',tier,c))),B:summarize(cards.map(c=>race('net',tier,c)))};
+}
+if(!isMainThread){
+ parentPort.postMessage(evaluateTier(workerData.tier));
+}else{
 console.log(`eval-policy: ${N} races/tier/brain requested · policy ${POLICY} · step ${(SIM_STEP*1e3).toFixed(2)} ms`);
 console.log('acceptance bands (declared before this run):',JSON.stringify(BANDS));
 const report={policy:POLICY,requested:N,bands:BANDS,tiers:{}};
 let allPass=true;
-for(const tier of ['rookie','pro','elite']){
- const cards=Array.from({length:N},(_,c)=>c);
- const heur=cards.map(c=>race('physical',tier,c)),bc=cards.map(c=>race('net',tier,c));
- const H=summarize(heur),B=summarize(bc);
+const tiers=['rookie','pro','elite'];
+const results=args.parallel?await Promise.all(tiers.map(tier=>new Promise((resolve,reject)=>{
+ const w=new Worker(new URL(import.meta.url),{workerData:{tier},argv:process.argv.slice(2)});
+ w.once('message',resolve);w.once('error',reject);w.once('exit',code=>{if(code!==0)reject(new Error('eval worker exited '+code))});
+}))):tiers.map(evaluateTier);
+for(const [i,tier] of tiers.entries()){
+ const {H,B}=results[i];
  const dPlace=B.meanPlace-H.meanPlace,dContacts=B.contactsPerRace-H.contactsPerRace,
   dOffroad=B.offroadPerRace-H.offroadPerRace,
   dTimePct=H.meanTime?(B.meanTime-H.meanTime)/H.meanTime*100:0,
@@ -93,7 +108,9 @@ for(const tier of ['rookie','pro','elite']){
  console.log(`[${tier}] net:       place ${B.meanPlace.toFixed(2)} (${B.places.join('/')}${B.wrecked?' W'+B.wrecked:''}) · contacts ${B.contactsPerRace.toFixed(2)}/race · off-road ${B.offroadPerRace.toFixed(2)} s · time ${B.meanTime.toFixed(1)} s · lead-rival ${B.meanBestRivalS.toFixed(0)} m`);
  console.log(`[${tier}] delta: place ${dPlace>=0?'+':''}${dPlace.toFixed(3)} · contacts ${dContacts>=0?'+':''}${dContacts.toFixed(3)} · off-road ${dOffroad>=0?'+':''}${dOffroad.toFixed(3)} s · time ${dTimePct>=0?'+':''}${dTimePct.toFixed(2)}% · wreck ${dWreckPP>=0?'+':''}${dWreckPP.toFixed(1)}pp · rival-dist ${dRivalPct.toFixed(2)}%  -> ${pass?'PASS':'FAIL'} ${JSON.stringify(checks)}`);
 }
-mkdirSync(new URL('../telemetry',import.meta.url),{recursive:true});
-writeFileSync(new URL('../telemetry/eval-results.json',import.meta.url),JSON.stringify(report,null,1));
-console.log(`\nVERDICT: net is ${allPass?'NOT WORSE than the heuristic under the pre-declared bands':'measurably WORSE than the heuristic'} — full report telemetry/eval-results.json`);
+const outPath=new URL('../'+OUT,import.meta.url);
+mkdirSync(dirname(outPath.pathname),{recursive:true});
+writeFileSync(outPath,JSON.stringify(report,null,1));
+console.log(`\nVERDICT: net is ${allPass?'NOT WORSE than the heuristic under the pre-declared bands':'measurably WORSE than the heuristic'} — full report ${OUT}`);
 process.exitCode=allPass?0:1;
+}

@@ -29,7 +29,11 @@ export class MLP {
    const W=new Float32Array(L.W),b=new Float32Array(L.b);
    for(let k=0;k<W.length;k++)if(!Number.isFinite(W[k]))throw new Error('mlp: non-finite weight');
    for(let k=0;k<b.length;k++)if(!Number.isFinite(b[k]))throw new Error('mlp: non-finite bias');
-   this.layers.push({width,units,act:ACT[L.activation],W,b});
+   // Pack each output's dot product contiguously once at load time. JSON remains
+   // input-major; accumulation order and f32 storage are unchanged at inference.
+   const packed=new Float32Array(W.length);
+   for(let j=0;j<units;j++)for(let i=0;i<width;i++)packed[j*width+i]=W[i*units+j];
+   this.layers.push({width,units,act:ACT[L.activation],W:packed,b});
    width=units;
   }
   if((spec.output|0)!==width)throw new Error('mlp: output width mismatch');
@@ -45,7 +49,8 @@ export class MLP {
   for(const {width,units,act,W,b} of this.layers){
    for(let j=0;j<units;j++){
     let sum=b[j];                                  // f64 accumulation over f32 operands
-    for(let i=0;i<width;i++)sum+=src[i]*W[i*units+j];
+    const offset=j*width;
+    for(let i=0;i<width;i++)sum+=src[i]*W[offset+i];
     dst[j]=act(sum);
    }
    const t=src;src=dst;dst=t;

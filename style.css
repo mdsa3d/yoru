@@ -22,3 +22,86 @@ body.critical .vignette{animation:pulse-red 1.1s ease-in-out infinite}
 #message.beat{animation:beat-in .35s cubic-bezier(.2,1.4,.4,1)}
 #message.go{color:#ffcf4d}
 #world{transition:filter .8s ease}#world.desaturating{filter:saturate(.35) brightness(.92)}
+
+/* Horizon presentation: cinematic garage, neon accents, restrained race instruments. */
+:root{--ice:#79e5f2;--muted:#a3b3c2;--surface:#0a131ee8}
+body{font-family:Arial,Helvetica,sans-serif}
+header{border-bottom:1px solid #d3edff12;background:linear-gradient(#050b16a6,transparent)}
+.brand{letter-spacing:3px}.brand-icon{color:var(--lime);text-shadow:0 0 22px #b8ff5555}
+.brand small{letter-spacing:2px;color:#a3b3c2}
+.online{border-left:1px solid #ffffff20;padding-left:20px}
+.menu-chapter{display:flex;align-items:center;gap:24px;margin-bottom:22px;font:9px monospace;letter-spacing:2px;color:#99abbc}
+.menu-chapter span:first-child{color:var(--ice)}
+.menu-chapter span:last-child{border-left:1px solid #ffffff30;padding-left:20px}
+main{top:19%;max-width:590px}
+h1{font-weight:900;font-size:clamp(64px,7.7vw,112px);line-height:.88;letter-spacing:-5px;margin:26px 0}
+h1 em{color:var(--lime);text-shadow:0 0 55px #b8ff551c}
+.intro{color:#c2cdd7;line-height:1.8}
+.eyebrow{letter-spacing:2px}.eyebrow .line{background:var(--ice)}
+.actions{gap:10px}.actions .primary{min-height:58px;padding:19px 24px;box-shadow:0 10px 35px #b8ff5514}
+.primary,.secondary,.icon,.bike-card,.world-card{transition:background .18s,border-color .18s,box-shadow .18s,transform .18s}
+.primary:hover{background:#d1ff8f;transform:translateY(-2px)}
+.secondary:hover,.icon:hover{background:#203342;border-color:var(--ice)}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--ice);outline-offset:5px}
+.ride-info{border-top:1px solid #d3edff20;padding-top:22px;margin-top:28px}
+.ride-info small{color:#a3b3c2}.ride-info b{color:#e2edf6;font-size:10px}
+#bikeCaption{padding:22px 26px;border-right:2px solid var(--ice);background:linear-gradient(270deg,#07101ec9,transparent);bottom:15%}
+#bikeCaption h2{font-size:38px;letter-spacing:-1.5px}#bikeCaption p{color:#a6b7c5}
+.specs b{font-variant-numeric:tabular-nums}.specs span{color:#a1b4c4}
+footer{padding-top:18px;border-top:1px solid #ffffff16;color:#a3b3c2}
+.panel{inset:94px 5% 46px;padding:30px 36px;background:linear-gradient(135deg,#122131f5,#070e18f7);border:1px solid #7394aa44;box-shadow:0 24px 100px #0009}
+.panel-title{position:sticky;top:-30px;z-index:2;padding:12px 0;background:#0e1929f5;border-bottom:1px solid #ffffff15;margin-bottom:24px}
+.panel h2{font-size:36px;font-weight:900;letter-spacing:-1.5px;margin-bottom:12px}
+.panel .eyebrow{color:var(--ice);font-size:9px}
+.bike-card{position:relative;min-height:130px;padding:22px;background:linear-gradient(135deg,#1b2c3d,#0e1723);border-color:#a4c3d326}
+.bike-card:hover{border-color:#79e5f299;transform:translateY(-2px)}
+.bike-card[aria-pressed=true]{background:linear-gradient(135deg,#b8ff5519,#102333);box-shadow:inset 3px 0 var(--lime)}
+.bike-card b{font-size:20px;letter-spacing:.5px}.bike-card span{color:#b0c0cd}
+.tuning{gap:22px}.tuning-heading{grid-column:1/-1;margin:8px 0 0;padding:18px 0 0;border-top:1px solid #ffffff1c;font:10px monospace;letter-spacing:2px;color:var(--ice)}
+.tuning-heading span{color:#d5e3ed;margin-left:15px}
+.tuning label{font-size:10px;color:#b8c8d6}.tuning select{padding:12px;background:#08121e;border-color:#7290a34d;border-radius:3px;min-height:42px}
+.fine{color:#a0b0bf;max-width:1000px}
+.world-card{min-height:240px;border-radius:3px;border-color:#8fa8bb40}
+.world-card b{font-size:30px;margin-top:55px}.world-card p{color:#dde5ed}
+.world-card[aria-pressed=true]{box-shadow:inset 3px 0 var(--lime),0 0 30px #b8ff550a}
+.race-top{padding:18px 22px;top:101px;gap:30px;background:linear-gradient(110deg,#06101bd9,#06101b55);border-left:2px solid var(--lime);border-bottom:1px solid #ffffff16}
+.race-top b{font-variant-numeric:tabular-nums}.race-top small{font-size:8px;letter-spacing:1.5px;color:#b6c6d2}
+.progress{top:87px;height:3px}.progress>div{box-shadow:0 0 12px #b8ff5555}
+.intelligence{top:205px;font-size:9px;color:#b7d0dd;max-width:430px}.intelligence small{color:#8fa9bb}
+#flightHud{padding:16px 18px;top:110px;background:linear-gradient(270deg,#06101bd9,#06101b55);border-right:2px solid var(--ice);border-bottom:1px solid #ffffff16}
+.drive-actions{top:272px}
+.telemetry{padding:18px 22px;background:linear-gradient(135deg,#07132266,#071322e8);border-right:2px solid var(--lime);border-bottom:1px solid #ffffff25;width:245px}
+.speed strong{font-variant-numeric:tabular-nums;font-size:82px;line-height:1.1}.speed span{color:#bdcbd8}
+.health{margin-top:15px;color:#c5d5e0}.health i,.energy i{box-shadow:0 0 12px #79e5f233}
+.telemetry>small{color:#a8bece}.race-help{color:#b5c7d5;text-shadow:0 2px 5px #000}
+#map{border-left:1px solid #79e5f244;background:linear-gradient(90deg,#07132288,transparent);opacity:.9}
+#message{left:50%;right:auto;transform:translateX(-50%);width:max-content;max-width:85vw;padding:12px 24px;border-bottom:2px solid var(--lime);background:#06101bd9}
+#message:empty{display:none}
+@keyframes beat-in{0%{scale:1.4;opacity:0}60%{scale:.96;opacity:1}100%{scale:1}}
+.overlay{background:radial-gradient(ellipse at center,#152638bb,#040913eb)}
+.overlay>div{width:min(600px,90vw);padding:36px;border-top:2px solid var(--lime);background:linear-gradient(135deg,#162739ee,#07111fee);box-shadow:0 30px 100px #0006}
+.overlay h2{font-weight:900}.overlay p{color:#bfccd8}
+@media(max-width:1000px){.menu-chapter span:last-child{display:none}main{max-width:480px}h1{font-size:76px}#bikeCaption h2{font-size:30px}}
+@media(max-width:650px){
+ header{padding:20px 5%}.brand{font-size:19px}.panel{inset:78px 3% 20px;padding:18px}.panel-title{top:-18px}.panel h2{font-size:25px}
+ main{top:16%;left:6%;right:6%;max-width:360px}.menu-chapter{font-size:8px;letter-spacing:1.4px;margin-bottom:18px}
+ h1{font-size:clamp(54px,15vw,76px);line-height:.9;margin:20px 0;letter-spacing:-3px}.intro{font-size:12px}
+ .actions{margin-top:20px}.actions .primary{min-height:50px;padding:16px 20px}.ride-info{padding-top:16px;margin-top:20px;gap:20px}
+ #bikeCaption{bottom:7%;left:6%;right:6%;padding:12px 16px;text-align:left;border-right:0;border-left:2px solid var(--ice);background:linear-gradient(90deg,#07101ec9,transparent)}
+ #bikeCaption h2{font-size:23px;margin:8px 0}#bikeCaption p{margin:6px 0}
+ .bike-card{min-height:120px;padding:16px}.bike-card b{font-size:16px}.tuning{gap:16px}.world-card{min-height:210px}.world-card b{font-size:25px;margin-top:40px}
+ .race-top{top:88px;left:4%;right:4%;padding:13px 12px;gap:0;justify-content:space-between}.race-top b{font-size:17px}.race-top small{font-size:7px;letter-spacing:.7px}
+ .progress{top:77px;left:4%;right:4%}.intelligence{top:163px;left:4%;max-width:53%;font-size:8px}
+ #flightHud{top:163px;right:4%;width:125px;padding:10px}#flightHud b{font-size:24px}.drive-actions{top:288px;right:4%}
+ .telemetry{bottom:145px;right:4%;width:174px;padding:12px}.speed strong{font-size:60px}.telemetry .tach{width:44px;height:44px}.health{font-size:7px}
+ #map{bottom:145px;left:4%;width:90px;height:110px}.overlay>div{padding:24px}.overlay h2{font-size:46px}
+}
+@media(max-height:720px){main{top:16%}.menu-chapter{margin-bottom:12px}h1{font-size:clamp(48px,9vh,72px);margin:16px 0}.actions{margin-top:16px}.ride-info{margin-top:18px;padding-top:14px}#bikeCaption{bottom:10%}}
+@media(max-height:720px) and (max-width:650px){.ride-info{display:none}#bikeCaption{padding:10px 14px}#bikeCaption h2{font-size:20px}#bikeCaption .eyebrow{font-size:7px}}
+@media(max-height:600px) and (max-width:650px){#bikeCaption,.menu-chapter{display:none}h1{font-size:46px}.actions .primary{min-height:44px;padding:12px 16px}}
+@media(max-height:560px) and (min-width:650px){main{top:24%;max-width:540px}h1{font-size:40px;line-height:.86;margin:12px 0}.menu-chapter,.ride-info{display:none}.intro{margin:8px 0;font-size:11px!important}.actions{flex-wrap:nowrap;max-width:none;margin-top:12px}.actions .primary,.actions .secondary{min-height:44px;padding:12px 16px;gap:12px}#bikeCaption{bottom:16%;padding:12px}.race-top{top:82px}.intelligence{top:176px}.telemetry{bottom:12%;padding:10px}.speed strong{font-size:60px}#flightHud{top:90px}.drive-actions{top:242px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* Studio layout: keep the machine visible while tuning on a wide display. */
+@media(min-width:1100px){#garage{right:43%;background:linear-gradient(135deg,#101d2cf5,#07111cf5)}#garage .bikes,#garage .tuning{grid-template-columns:repeat(2,1fr)}#garage .bike-card{min-height:110px;padding:16px}#garage .bike-card b{font-size:17px}}
+
+@media(min-width:1100px){#bikeCaption{bottom:8%;background:transparent;border:0;padding:0;transform:scale(.85);transform-origin:right bottom}}

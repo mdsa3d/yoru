@@ -1,7 +1,8 @@
 import * as T from 'three';
-import {box,rod,batch,neon,black,metal} from './models.js';
+import {box,rod,batch,neon,black,metal,makeWorldProp} from './models.js';
 import {road,slope} from './physics.js';
 import {getWorld,random,nextGate,pylon,skyParams} from './world-data.js';
+import {terrainSample} from './terrain.js';
 import {heightField,normalFromHeight,roughnessFromHeight} from './materials.js';
 
 function canvasTexture(draw,w=512,h=512){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=8;return t}
@@ -31,14 +32,12 @@ function makeSky(world){
 #include <tonemapping_fragment>\n#include <colorspace_fragment>}
  `});const sky=new T.Mesh(new T.SphereGeometry(1500,32,16),m);sky.frustumCulled=false;return sky;
 }
-function mountainGeometry(kind,seed){
- const geo=new T.PlaneGeometry(1700,240,64,16);geo.rotateX(-Math.PI/2);const p=geo.attributes.position,col=[];
- for(let i=0;i<p.count;i++){const x=p.getX(i),z=(seed*80-p.getZ(i))*Math.PI*2/3120;const edge=Math.max(0,(Math.abs(x)-55)/250);let height=(Math.sin(x*.016)*.4+Math.sin(z*5+x*.007)*.2+.85)*Math.min(1,edge)*100;
- height+=Math.min(1,edge)*(Math.sin(x*.09+z*8)*5+Math.sin(z*12+x*.17)*2);
- if(kind==='desert'){height*=.73;height=Math.round(height/5)*5+Math.sin(x*.2)*1.2}else height*=1.6;
- p.setY(i,height-10);const shade=.70+random(i+seed)*.22;const c=new T.Color(kind==='alpine'?(height>65?'#dfebef':'#72838b'):'#ae7957');c.multiplyScalar(shade);col.push(c.r,c.g,c.b);
- }geo.setAttribute('color',new T.Float32BufferAttribute(col,3));geo.computeVertexNormals();return geo;
+function updateTerrain(mesh,index,kind){
+ const p=mesh.geometry.attributes.position,c=mesh.geometry.attributes.color,n=mesh.geometry.attributes.normal;
+ for(let i=0;i<p.count;i++){const x=p.getX(i),at=index*240-p.getZ(i);const sample=terrainSample(x,at,kind);p.setY(i,sample.height);c.setXYZ(i,...sample.color);n.setXYZ(i,...sample.normal)}
+ p.needsUpdate=true;c.needsUpdate=true;n.needsUpdate=true;mesh.geometry.computeBoundingSphere();mesh.userData.chunk=index;
 }
+function mountainGeometry(){const geo=new T.PlaneGeometry(1800,240,96,24);geo.rotateX(-Math.PI/2);geo.setAttribute('color',new T.BufferAttribute(new Float32Array(geo.attributes.position.count*3),3));return geo}
 function waterMaterial(world){return new T.ShaderMaterial({transparent:false,uniforms:{time:{value:0},fogColor:{value:new T.Color(world.fog)},sunColor:{value:new T.Color(world.sun)},sunDir:{value:new T.Vector3(-.55,.48,-.85).normalize()}},vertexShader:`varying vec3 wp;varying vec3 vp;uniform float time;void main(){vec3 p=position;p.y+=sin(p.x*.06+time*.55)*.28+sin(p.z*.04-time*.35)*.3;vec4 world=modelMatrix*vec4(p,1.);wp=world.xyz;vec4 v=modelViewMatrix*vec4(p,1.);vp=v.xyz;gl_Position=projectionMatrix*v;}`,fragmentShader:`varying vec3 wp;varying vec3 vp;uniform float time;uniform vec3 fogColor,sunColor,sunDir;void main(){float dx=cos(wp.x*.11+time*.8)*.09+cos(wp.x*.31+wp.z*.16+time)*.035;float dz=cos(wp.z*.075-time*.6)*.08;vec3 n=normalize(vec3(dx,1.,dz));vec3 eye=normalize(cameraPosition-wp);float fres=pow(1.-max(dot(eye,n),0.),4.);vec3 c=mix(vec3(.027,.13,.17),fogColor*.85,fres);float spec=pow(max(dot(reflect(-sunDir,n),eye),0.),180.);c+=sunColor*spec*2.;float wave=pow(.5+.5*sin(wp.x*.12+wp.z*.23+time*.5),18.);c+=vec3(.08,.13,.13)*wave;float fog=1.-exp(-length(vp)*.0015);gl_FragColor=vec4(mix(c,fogColor,fog),1.);
 #include <tonemapping_fragment>\n#include <colorspace_fragment>}`})}
 export class Environment{
@@ -54,14 +53,16 @@ export class Environment{
  this.edgeMat=neon(w.accent,2.2);this.secondaryMat=neon(w.secondary,3.4);const line=new T.MeshStandardMaterial({color:'#d8d4be',roughness:.7});
  this.chunks=[];
  for(let i=0;i<44;i++){const g=new T.Group();const deck=box(g,18,.4,24,0,-.23,0,this.roadMat);deck.receiveShadow=true;
- for(const side of [-1,1]){box(g,.38,.62,24,side*9.25,.16,0,this.concrete);box(g,.045,.035,24,side*9.02,.50,0,this.edgeMat);for(let k=0;k<4;k++)box(g,.42,.08,.15,side*9.25,.52,k*6-9,metal);box(g,.10,.015,24,side*8.3,.006,0,line);if(i%3===0){rod(g,[side*10,0,0],[side*10,8,0],.09,metal);rod(g,[side*10,8,0],[side*7.5,8,0],.07,metal);box(g,2,.07,.25,side*7.5,7.94,0,this.edgeMat)}box(g,1.5,13,1.5,side*7,-6,0,this.concrete)}
+ const props=[];
+ for(const side of [-1,1]){box(g,.38,.62,24,side*9.25,.16,0,this.concrete);box(g,.045,.035,24,side*9.02,.50,0,this.edgeMat);for(let k=0;k<4;k++)box(g,.42,.08,.15,side*9.25,.52,k*6-9,metal);box(g,.10,.015,24,side*8.3,.006,0,line);if(i%3===0){const lamp=makeWorldProp('streetlamp');if(lamp){lamp.position.set(side*10,0,0);if(side<0)lamp.rotation.y=Math.PI;g.add(lamp);props.push(lamp)}else{rod(g,[side*10,0,0],[side*10,8,0],.09,metal);rod(g,[side*10,8,0],[side*7.5,8,0],.07,metal);box(g,2,.07,.25,side*7.5,7.94,0,this.edgeMat)}}box(g,1.5,13,1.5,side*7,-6,0,this.concrete)}
+ if(i%11===5){const gantry=makeWorldProp('gantry');if(gantry){g.add(gantry);props.push(gantry)}}
  for(const x of [-4.5,0,4.5])for(const z of [-8,0,8])box(g,.095,.018,4,x,.008,z,line);
- batch(g);g.traverse(o=>{if(o.isMesh)o.receiveShadow=true});this.chunks.push(g);this.root.add(g);
+ batch(g,props);g.traverse(o=>{if(o.isMesh)o.receiveShadow=true});this.chunks.push(g);this.root.add(g);
  }
  this.scenery=[];this.terrain=[];
  if(w.kind==='city')this.buildCity();else this.buildLandscape();
  this.beacons=[];for(let i=0;i<9;i++){const g=new T.Group();const hoop=new T.Mesh(new T.TorusGeometry(7,.13,8,64),this.edgeMat);g.add(hoop);for(let n=0;n<4;n++){const t=box(g,.16,.9,.24,Math.sin(n*Math.PI/2)*7,Math.cos(n*Math.PI/2)*7,0,this.secondaryMat);t.rotation.z=-n*Math.PI/2}const number=canvasTexture((c,a,b)=>{c.clearRect(0,0,a,b);c.fillStyle=w.accent;c.textAlign='center';c.font='bold 70px monospace';c.fillText('VECTOR',a/2,100);c.font='30px monospace';c.fillText('AIR CORRIDOR',a/2,150)},512,256);const label=new T.Mesh(new T.PlaneGeometry(5,2.5),new T.MeshBasicMaterial({map:number,transparent:true,depthWrite:false}));label.position.y=9;g.add(label);this.beacons.push(g);this.root.add(g)}
- this.pylons=[];for(let i=0;i<5;i++){const g=new T.Group();box(g,5,38,7,0,19,0,this.concrete);box(g,5.3,.5,7.3,0,38,0,metal);for(const side of [-1,1])box(g,.065,36,.07,side*2.55,19,3.55,this.secondaryMat);const cap=new T.Mesh(new T.SphereGeometry(.23,10,8),neon('#ff7656',4.5));cap.position.y=38.6;g.add(cap);batch(g);this.pylons.push(g);this.root.add(g)}
+ this.pylons=[];for(let i=0;i<5;i++){const g=new T.Group(),pylonProp=makeWorldProp('pylon');if(pylonProp){g.add(pylonProp)}else{box(g,5,38,7,0,19,0,this.concrete);box(g,5.3,.5,7.3,0,38,0,metal);for(const side of [-1,1])box(g,.065,36,.07,side*2.55,19,3.55,this.secondaryMat);const cap=new T.Mesh(new T.SphereGeometry(.23,10,8),neon('#ff7656',4.5));cap.position.y=38.6;g.add(cap);batch(g)}this.pylons.push(g);this.root.add(g)}
  const glow=canvasTexture((c,a,b)=>{const v=c.createRadialGradient(a/2,b/2,0,a/2,b/2,a/2);v.addColorStop(0,'#ffffff66');v.addColorStop(.25,'#ffffff16');v.addColorStop(1,'#ffffff00');c.fillStyle=v;c.fillRect(0,0,a,b)},128,128);
  this.reflections=[];const reflGeo=new T.PlaneGeometry(4,19);reflGeo.rotateX(-Math.PI/2);this.reflM4=new T.Matrix4();for(const color of [w.secondary,w.accent]){const m=new T.InstancedMesh(reflGeo,new T.MeshBasicMaterial({map:glow,color,transparent:true,depthWrite:false,blending:T.AdditiveBlending}),12);m.count=0;m.frustumCulled=false;this.root.add(m);this.reflections.push(m)}
  }
@@ -76,7 +77,8 @@ export class Environment{
  box(g,2,2,4,x+2,h*1.25-2,0,metal);rod(g,[x,h*1.25-2,0],[x,h*1.25+7,0],.06,metal);
  if(i%3===0){box(g,.12,h*.85,.1,x-width*.5-.15,h*.5,depth*.5,this.secondaryMat);const text=['AKUMA','空路 / SKYWAY','NO SLEEP','夜の街','VECTOR','KŌSOKU'][i%6];const tex=canvasTexture((c,a,b)=>{c.fillStyle='#131d2a';c.fillRect(0,0,a,b);c.fillStyle=i%2?w.accent:w.secondary;c.textAlign='center';c.font='bold 68px sans-serif';c.fillText(text,a/2,130);c.font='18px monospace';c.fillText('LIFE ABOVE THE STREET',a/2,186);c.fillStyle='rgba(0,0,0,.14)';for(let y=0;y<b;y+=4)c.fillRect(0,y,a,1);for(let n=0;n<400;n++){const v=random(n*3+i);c.fillStyle=v>.5?'rgba(255,255,255,.06)':'rgba(0,0,0,.10)';c.fillRect(random(n*7+i)*a,random(n*11+i*3)*b,1+v*2,1+v*2)}c.strokeStyle=i%2?w.accent:w.secondary;c.lineWidth=3;c.strokeRect(4,4,a-8,b-8)},512,256);const sign=new T.Mesh(new T.PlaneGeometry(12,6),new T.MeshBasicMaterial({map:tex,side:T.DoubleSide}));sign.position.set(x,Math.min(30,h*.7),depth*.5+.3);g.add(sign)}
  if(i%6===0){const bridge=box(g,side*0+18,2,4,side*27,52,0,this.concrete);box(g,18,.07,4.1,side*27,53.1,0,this.edgeMat)}
- batch(g);this.scenery.push(g);this.root.add(g);
+ const exclude=[];if(i%4===0){const tw=makeWorldProp('tower');if(tw){tw.position.set(side*(92+random(i+12)*35),-5,0);tw.scale.setScalar(.75+random(i+3)*.45);g.add(tw);exclude.push(tw)}}
+ batch(g,exclude);this.scenery.push(g);this.root.add(g);
  }
  const ground=new T.Mesh(new T.PlaneGeometry(2500,2500),this.concrete.clone());ground.rotation.x=-Math.PI/2;ground.position.y=-6;ground.receiveShadow=true;this.root.add(ground);this.ground=ground;this.groundMat=ground.material;
  }
@@ -84,7 +86,7 @@ export class Environment{
  if(w.kind==='ocean'){
  const geo=new T.PlaneGeometry(2800,2800,100,100);geo.rotateX(-Math.PI/2);this.water=new T.Mesh(geo,waterMaterial(w));this.water.position.y=-11;this.root.add(this.water);
  }else{
- const mat=new T.MeshStandardMaterial({vertexColors:true,roughness:.98,metalness:.04});for(let i=0;i<13;i++){const t=new T.Mesh(mountainGeometry(w.kind,i*3),mat);t.receiveShadow=true;this.terrain.push(t);this.root.add(t)}
+ this.terrainMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.94,metalness:0});for(let i=0;i<9;i++){const t=new T.Mesh(mountainGeometry(),this.terrainMat);updateTerrain(t,i-3,w.kind);t.receiveShadow=true;this.terrain.push(t);this.root.add(t)}
  }
  const desertRock=w.kind==='desert'?new T.MeshStandardMaterial({color:'#8a5a3c',roughness:.95,metalness:0,flatShading:true}):null,desertCactus=w.kind==='desert'?new T.MeshStandardMaterial({color:'#3d5c3a',roughness:.8,metalness:0}):null,frost=w.kind==='alpine'?neon('#cfe9ff',1.1):null;
  for(let i=0;i<24;i++){const g=new T.Group(),side=i%2?1:-1,x=side*(47+random(i+8)*90);
@@ -112,7 +114,7 @@ export class Environment{
  update(s,clock,setup,flight){const rx=road(s),range=setup.quality==='low'?480:850;this.sky.position.set(0,0,0);this.sky.material.uniforms.time.value=clock;this.sky.material.uniforms.detail.value=this.fx===false?0:1;
  const rb=Math.floor(s/24)-5;for(let i=0;i<this.chunks.length;i++){const n=rb+((i-rb)%this.chunks.length+this.chunks.length)%this.chunks.length,at=n*24;const g=this.chunks[i];g.position.set(road(at)-rx,0,s-at);g.rotation.y=-Math.atan(slope(at));g.visible=s-at>-range&&s-at<100}
  const spacing=this.world.kind==='city'?32:85,cb=Math.floor(s/spacing)-6;for(let i=0;i<this.scenery.length;i++){const n=cb+((i-cb)%this.scenery.length+this.scenery.length)%this.scenery.length,at=n*spacing,g=this.scenery[i];g.position.set(road(at)-rx,0,s-at);g.visible=s-at>-range-150&&s-at<240;if(g.visible&&g.userData.rotor)g.userData.rotor.rotation.z=clock*.18}
- const tb=Math.floor(s/240)-3;for(let i=0;i<this.terrain.length;i++){const n=tb+((i-tb)%this.terrain.length+this.terrain.length)%this.terrain.length;this.terrain[i].position.set(-rx,0,s-n*240)}
+ const tb=Math.floor(s/240)-3;for(let i=0;i<this.terrain.length;i++){const n=tb+((i-tb)%this.terrain.length+this.terrain.length)%this.terrain.length;const t=this.terrain[i];if(t.userData.chunk!==n)updateTerrain(t,n,this.world.kind);t.position.set(-rx,0,s-n*240);t.visible=Math.abs(s-n*240)<range+240}
  const first=Math.max(0,Math.floor((s-180)/190));for(let i=0;i<this.beacons.length;i++){const gate=nextGate(first+i),m=this.beacons[i];m.position.set(road(gate.s)-rx+gate.x,gate.y,s-gate.s);m.visible=gate.s-s<range&&gate.s-s>-40&&(flight||Math.abs(gate.s-s)<400);m.children[0].material=this.edgeMat;}
  const pb=Math.max(0,Math.floor((s-340)/470));for(let i=0;i<this.pylons.length;i++){const p=pylon(pb+i);this.pylons[i].position.set(road(p.s)-rx+p.x,0,s-p.s)}
  const wet=setup.weather==='rain';this.roadMat.roughness=wet?.26:.83;this.roadMat.metalness=wet?.27:.05;this.roadMat.envMapIntensity=wet?1.6:.8;
@@ -123,6 +125,6 @@ export class Environment{
  // G5: assign/remove the procedural detail maps (no-op across repeated same-value calls; the one shader
  // recompile per transition is accepted). Called from World.render() with effects && setup.gfxDetail==='on'.
  setDetailMaps(on){if(this.detailMaps===on)return;this.detailMaps=on;const d=on?this.detail:{};
- for(const m of [this.roadMat,this.groundMat]){if(!m)continue;const g=m===this.groundMat;m.normalMap=(g?d.groundN:d.roadN)||null;m.roughnessMap=(g?d.groundR:d.roadR)||null;m.needsUpdate=true}}
- dispose(){this.scene.remove(this.root);const geometry=new Set(),materials=new Set(),textures=new Set();this.root.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(o.geometry)geometry.add(o.geometry);if(o.material&&![black,metal].includes(o.material)){materials.add(o.material);for(const k of ['map','emissiveMap','roughnessMap','normalMap'])if(o.material[k])textures.add(o.material[k])}});for(const k in this.detail)textures.add(this.detail[k]);geometry.forEach(g=>{if(g.type!=='BoxGeometry')g.dispose()});materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose())}
+ for(const m of [this.roadMat,this.groundMat,this.terrainMat]){if(!m)continue;const g=m!==this.roadMat;m.normalMap=(g?d.groundN:d.roadN)||null;m.roughnessMap=(g?d.groundR:d.roadR)||null;m.needsUpdate=true}}
+ dispose(){this.scene.remove(this.root);const geometry=new Set(),materials=new Set(),textures=new Set();this.root.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(o.userData.sharedTemplate)return;if(o.geometry)geometry.add(o.geometry);if(o.material&&![black,metal].includes(o.material)){materials.add(o.material);for(const k of ['map','emissiveMap','roughnessMap','normalMap'])if(o.material[k])textures.add(o.material[k])}});for(const k in this.detail)textures.add(this.detail[k]);geometry.forEach(g=>{if(g.type!=='BoxGeometry')g.dispose()});materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose())}
 }
