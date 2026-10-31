@@ -24,11 +24,13 @@
 //                         every --self-play-refresh generations (default 25)
 //     --resume PATH       resume from out/checkpoint.json
 //     --minutes F         wall-clock budget; stops after the current generation (default none)
-//     --eval-episodes N   held-out seeds for the final eval (default 12)
+//     --validate-every N  select the best ES mean every N generations (default 10)
+//     --validation-episodes N  fixed selection seeds (default 6), separate from test seeds
+//     --eval-episodes N   untouched test seeds for the final eval (default 12)
 //     --out DIR           output directory (default tools/rl/out)
 //
 // Outputs (tools/rl/out/ — NEVER assets/ai; promotion is a human decision):
-//   rival-policy-rl.json   neon-rash-mlp@1 weights of the final ES mean, with meta
+//   rival-policy-rl.json   neon-rash-mlp@2 weights of the best validated ES mean, with meta
 //   checkpoint.json        latest resumable state (theta + Adam moments + config + curve)
 //   curve.jsonl            one JSON line per generation (the true learning curve)
 //   eval.json              held-out evaluation of the trained mean vs the heuristic baseline
@@ -42,9 +44,10 @@ import {initTheta,thetaToSpec,specToTheta,loadSpec,saveSpec,layerDims,countParam
 import {evaluate,DEFAULT_SETUP} from './env.js';
 import {REWARD_WEIGHTS} from './reward.js';
 import {OBS_WIDTH} from '../../src/obs.js';
+import {selectPolicy} from './selection.js';
 function parseArgs(argv){
  const o={generations:60,pop:16,episodes:2,sigma:.02,lr:.01,hidden:[128,128],tier:'pro',seed:1,maxSeconds:45,
-  workers:0,init:null,selfPlay:false,selfPlayRefresh:25,resume:null,minutes:0,evalEpisodes:12,out:new URL('./out/',import.meta.url).pathname};
+  workers:0,init:null,selfPlay:false,selfPlayRefresh:25,resume:null,minutes:0,evalEpisodes:12,validateEvery:10,validationEpisodes:6,out:new URL('./out/',import.meta.url).pathname};
  for(let i=2;i<argv.length;i++){
   const a=argv[i];
   if(a==='--self-play')o.selfPlay=true;
@@ -55,11 +58,13 @@ function parseArgs(argv){
   }
  }
  if(!o.hidden.length)o.hidden=[128,128];
+ for(const k of ['validateEvery','validationEpisodes','evalEpisodes'])if(!Number.isInteger(o[k])||o[k]<1)throw new Error(k+' must be a positive integer');
  return o;
 }
 // Training episode seeds: deterministic in (masterSeed, generation, episodeSlot).
 // Held-out seeds live at HELD_OUT_BASE + i — a disjoint range, never trained on.
 const HELD_OUT_BASE=77000000;
+const VALIDATION_BASE=66000000;
 const episodeSeed=(master,gen,slot)=>master*100003+gen*64+slot;
 async function main(){
  const cfg=parseArgs(process.argv);
@@ -84,6 +89,13 @@ async function main(){
  }
  const tiers=cfg.tier==='all'?['rookie','pro','elite']:[cfg.tier];
  for(const t of tiers)if(!['rookie','pro','elite'].includes(t))throw new Error('unknown tier '+t);
+ const validationSeeds=Array.from({length:cfg.validationEpisodes},(_,i)=>VALIDATION_BASE+i);
+ const shape={input:OBS_WIDTH,hidden:cfg.hidden,output:3};
+ const validate=theta=>evaluate(thetaToSpec(Float32Array.from(theta),shape),validationSeeds,{setup:DEFAULT_SETUP,tiers,maxSeconds:cfg.maxSeconds}).fitness;
+ let selected=cfg.resume?JSON.parse(readFileSync(cfg.resume,'utf8')).selected:null;
+ // Re-score a restored selection under this run's validation configuration.
+ if(selected)selected=selectPolicy(null,selected.theta,validate(selected.theta),selected.generation);
+ selected=selectPolicy(selected,es.theta,validate(es.theta),es.gen);
  const nWorkers=cfg.workers||Math.max(1,Math.min(cpus().length-1,cfg.pop));
  const workers=Array.from({length:nWorkers},()=>new Worker(new URL('./worker.mjs',import.meta.url),
   {workerData:{setup:DEFAULT_SETUP,tiers,maxSeconds:cfg.maxSeconds,hidden:cfg.hidden}}));
@@ -126,10 +138,15 @@ async function main(){
   const row={gen:g,mean,best:hi,gradNorm,rivalS:m.rivalS,playerS:m.playerS,beatPlayer:m.beatPlayer,
    contacts:m.contacts,collisions:m.collisions,strikes:m.strikes,offRoadFrac:m.offRoadFrac};
   curve.push(row);
+  if((g+1)%cfg.validateEvery===0||g===cfg.generations-1){
+   row.validationFitness=validate(es.theta);
+   selected=selectPolicy(selected,es.theta,row.validationFitness,es.gen);
+   console.log(`validation: ${row.validationFitness.toFixed(2)} | selected gen ${selected.generation} fit ${selected.fitness.toFixed(2)}`);
+  }
   appendFileSync(curvePath,JSON.stringify(row)+'\n');
   console.log(`gen ${String(g).padStart(3)} | fit ${mean.toFixed(2).padStart(8)} (best ${hi.toFixed(2)}) | rival s ${m.rivalS.toFixed(0)} vs player ${m.playerS.toFixed(0)} | win ${(m.beatPlayer*100).toFixed(0)}% | contact ${m.contacts.toFixed(1)} coll ${m.collisions.toFixed(1)} offroad ${(m.offRoadFrac*100).toFixed(1)}%`);
   if((g+1)%10===0||g===cfg.generations-1){
-   writeFileSync(join(cfg.out,'checkpoint.json'),JSON.stringify({...esSnapshot(es),config:cfg,curve}));
+   writeFileSync(join(cfg.out,'checkpoint.json'),JSON.stringify({...esSnapshot(es),config:cfg,curve,selected}));
   }
   if(cfg.minutes&&(performance.now()-t0)/60000>=cfg.minutes){console.log(`time budget ${cfg.minutes} min reached at gen ${g}`);break}
  }
@@ -137,7 +154,8 @@ async function main(){
  const stepsPerSec=Math.round(stepsTotal/elapsed);
  // Held-out evaluation: trained mean vs heuristic baseline on seeds never trained on.
  const heldOut=Array.from({length:cfg.evalEpisodes},(_,i)=>HELD_OUT_BASE+i);
- const trainedSpec=thetaToSpec(Float32Array.from(es.theta),{input:OBS_WIDTH,hidden:cfg.hidden,output:3});
+ selected=selectPolicy(selected,es.theta,validate(es.theta),es.gen);
+ const trainedSpec=thetaToSpec(Float32Array.from(selected.theta),shape);
  const trained=evaluate(trainedSpec,heldOut,{setup:DEFAULT_SETUP,tiers,maxSeconds:cfg.maxSeconds});
  const baseline=evaluate(null,heldOut,{setup:DEFAULT_SETUP,tiers,maxSeconds:cfg.maxSeconds});
  const perTier=tiers.length>1?Object.fromEntries(tiers.map(t=>[t,{
@@ -145,15 +163,17 @@ async function main(){
   baseline:evaluate(null,heldOut,{setup:DEFAULT_SETUP,tier:t,maxSeconds:cfg.maxSeconds}).fitness}])):undefined;
  const evalReport={heldOutSeeds:heldOut,tiers,trained:{fitness:trained.fitness,metrics:trained.metrics},
   baseline:{fitness:baseline.fitness,metrics:baseline.metrics},perTier,
+  selection:{generation:selected.generation,fitness:selected.fitness,validationSeeds},
   stepsPerSec,elapsedSeconds:Math.round(elapsed),generations:es.gen};
  writeFileSync(join(cfg.out,'eval.json'),JSON.stringify(evalReport,null,1));
  trainedSpec.meta={label:'RL (OpenAI-ES) rival policy — see tools/rl/README.md; exported to tools/rl/out only, NOT promoted to assets/ai',
   algorithm:'openai-es',rewardWeights:REWARD_WEIGHTS,
-  trained:{generations:es.gen,seed:cfg.seed,tier:cfg.tier,episodes:cfg.episodes,pop:cfg.pop,sigma:cfg.sigma,lr:cfg.lr,stepsPerSec},
+  selection:evalReport.selection,
+  trained:{generations:es.gen,seed:cfg.seed,tier:cfg.tier,episodes:cfg.episodes,pop:cfg.pop,sigma:cfg.sigma,lr:cfg.lr,stepsPerSec,initialization:initLabel},
   heldOut:{fitness:trained.fitness,beatPlayer:trained.metrics.beatPlayer,rivalS:trained.metrics.rivalS},
   baseline:{fitness:baseline.fitness,beatPlayer:baseline.metrics.beatPlayer,rivalS:baseline.metrics.rivalS}};
  saveSpec(join(cfg.out,'rival-policy-rl.json'),trainedSpec);
- writeFileSync(join(cfg.out,'checkpoint.json'),JSON.stringify({...esSnapshot(es),config:cfg,curve}));
+ writeFileSync(join(cfg.out,'checkpoint.json'),JSON.stringify({...esSnapshot(es),config:cfg,curve,selected}));
  console.log(`done: ${es.gen} gens in ${Math.round(elapsed)} s · ${stepsPerSec.toLocaleString('en-US')} sim steps/s`);
  console.log(`held-out (${cfg.evalEpisodes} seeds): trained fit ${trained.fitness.toFixed(2)} win ${(trained.metrics.beatPlayer*100).toFixed(0)}% s=${trained.metrics.rivalS.toFixed(0)} | baseline fit ${baseline.fitness.toFixed(2)} win ${(baseline.metrics.beatPlayer*100).toFixed(0)}% s=${baseline.metrics.rivalS.toFixed(0)}`);
  for(const w of workers)w.terminate();

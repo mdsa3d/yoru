@@ -21,6 +21,16 @@ let previous={},renderState={},actorPrevious=new WeakMap(),actorRender=new WeakM
 function snapshot(){Object.assign(previous,p);for(const a of [...rivals,...traffic,...drones]){let old=actorPrevious.get(a);if(!old){old={};actorPrevious.set(a,old)}Object.assign(old,a)}}
 function smoothActors(actors,alpha){return actors.map(a=>{let out=actorRender.get(a);if(!out){out={};actorRender.set(a,out)}const old=actorPrevious.get(a)||a;return interpolate(Math.abs(old.s-a.s)>50?a:old,a,alpha,out)})}
 const $=id=>document.getElementById(id),show=(id,v)=>$(id).hidden=!v;
+// Keep keyboard navigation inside the active garage/world dialog.
+document.addEventListener('keydown',e=>{
+ if(e.key!=='Tab')return;
+ const panel=['garage','worldPanel'].map($).find(p=>!p.hidden);if(!panel)return;
+ const controls=[...panel.querySelectorAll('button,input,select,a[href]')].filter(el=>!el.disabled&&el.getClientRects().length);
+ const first=controls[0],last=controls.at(-1);if(!first)return;
+ if(!panel.contains(document.activeElement)||(e.shiftKey&&document.activeElement===first)||(!e.shiftKey&&document.activeElement===last)){
+  e.preventDefault();(e.shiftKey?last:first).focus();
+ }
+});
 const defaults={bike:0,paint:BIKES[0].color,gearing:1,tires:'street',weather:'rain',assist:1,mode:'race',quality:'auto',brain:'local',style:'solid',rivalBrain:'heuristic',gfxShadow:'on',gfxGtao:'on',gfxDetail:'on',gfxSsr:'off',gfxTunnels:'on',music:.5,fx:.7,world:'akuma',launch:'street'};
 let setup={...defaults};
 try{const saved=JSON.parse(localStorage.getItem('neon-rash-setup')||'null');if(saved&&typeof saved==='object')for(const k of Object.keys(defaults))if(typeof saved[k]===typeof defaults[k])setup[k]=saved[k]}catch{}
@@ -29,8 +39,8 @@ for(const [key,values] of Object.entries({tires:['street','rain','slick'],weathe
 try{if(new URLSearchParams(location.search).get('rival-brain')==='net')setup.rivalBrain='net'}catch{}
 if(!/^#[0-9a-f]{6}$/i.test(setup.paint))setup.paint=defaults.paint;
 let bike=BIKES[setup.bike],p=createState(),mode='menu',rivals=[],traffic=[],drones=[],hazards=[],countdown=0,messageUntil=0,clock=0,accumulator=0,last=performance.now();
-// Physics-driven rivals stay opt-in (URL ?rival-physics or localStorage flag) until proven by eval; default keeps the kinematic feel.
-const rivalPhysics=(()=>{try{return new URLSearchParams(location.search).has('rival-physics')||localStorage.getItem('neon-rash-v3-rival-physics')==='1'}catch{return false}})();
+// Physics-driven rivals are enabled by default for real-life motorcycle dynamics (?kinematic-rivals or localStorage '0' opts out).
+const rivalPhysics=(()=>{try{return !new URLSearchParams(location.search).has('kinematic-rivals')&&localStorage.getItem('neon-rash-v3-rival-physics')!=='0'}catch{return true}})();
 // Policy-net rivals (B8) are doubly opt-in: setup.rivalBrain='net' AND the physical-rivals
 // path. The shipped weights are an UNTRAINED synthetic placeholder (see ASSETS.md), so the
 // default stays 'heuristic' and any fetch/load failure silently keeps the heuristic.
@@ -109,7 +119,7 @@ function strike(side){
 function fly(){if(mode!=='race'||countdown>0)return;message(toggleFlight(p),2.2);rivals.forEach((a,i)=>{const wasAir=a.flight;a.flight=p.flight;a.target=rivalTarget(p.flight,i);if(rivalPhysics){if(a.flight)a.altTarget=Math.max(24,a.y||0);else if(wasAir){a.landing=true;a.altTarget=0}}})}
 $('flyButton').onclick=fly;$('cameraButton').onclick=()=>world.cameraMode=(world.cameraMode+1)%3;
 const consumed=new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','q','e','p','c','f','shift','control','escape']);
-addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;if(consumed.has(k))e.preventDefault();keys.add(k);if(e.repeat)return;if(k==='p'||k==='escape'){if(!$('garage').hidden)$('closeGarage').click();else if(!$('worldPanel').hidden)$('closeWorlds').click();else setPaused()}if(k==='c')world.cameraMode=(world.cameraMode+1)%3;if(k==='f')fly();if(k==='q')strike(-1);if(k==='e')strike(1)});
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='escape'){const close=!$('garage').hidden?'closeGarage':!$('worldPanel').hidden?'closeWorlds':null;if(close){e.preventDefault();$(close).click();return}}if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;if(consumed.has(k))e.preventDefault();keys.add(k);if(e.repeat)return;if(k==='p'||k==='escape'){if(!$('garage').hidden)$('closeGarage').click();else if(!$('worldPanel').hidden)$('closeWorlds').click();else setPaused()}if(k==='c')world.cameraMode=(world.cameraMode+1)%3;if(k==='f')fly();if(k==='q')strike(-1);if(k==='e')strike(1)});
 addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>{keys.clear();if(mode==='race')setPaused()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='race')setPaused()});
 addEventListener('pointermove',e=>{world.pointer.x=(e.clientX/innerWidth)*2-1;world.pointer.y=(e.clientY/innerHeight)*2-1});
 addEventListener('pointerleave',()=>{world.pointer.x=0;world.pointer.y=0});
@@ -168,6 +178,12 @@ function frame(now){
 buildGarage();buildWorlds();updateCaption();requestAnimationFrame(frame);
 const urlParams=new URLSearchParams(location.search);
 if(urlParams.has('test')||urlParams.has('bench'))window.__game={get performance(){return {...stats.summary(),droppedSeconds:fixed.dropped,calls:world.renderer.info.render.calls,triangles:world.renderer.info.render.triangles}},director,decisions,get state(){return p},get mode(){return mode},get rivals(){return rivals},get traffic(){return traffic},get drones(){return drones},get hazards(){return hazards},get setup(){return setup},get audio(){return audio},get gates(){return {passed:sim.gatesPassed,missed:sim.gatesMissed,index:sim.gateIndex}},get sim(){return sim},telemetry,get renderInfo(){return world.renderer.info.render},get quality(){return {rung:world.ladder.rung,label:world.tier.label,hz:displayHz,probe:world.probeTier}},advance(seconds){for(let t=0;t<seconds;t+=1/120)if(mode==='race')simulate(1/120)},setInput(key,down){down?keys.add(key):keys.delete(key)},selectWorld,fly,start,finish,strike,world};
+if(urlParams.has('test')){
+ if(urlParams.has('bike')){const bi=clamp(+urlParams.get('bike')||0,0,BIKES.length-1);setup.bike=bi;bike=BIKES[bi];setup.paint=bike.color;world.setBike(bike,setup.paint);buildGarage();updateCaption()}
+ if(urlParams.has('world'))selectWorld(urlParams.get('world'));
+ if(urlParams.has('garage'))$('garageButton').click();
+ if(urlParams.has('race')){start();if(urlParams.has('settle')){for(const a of rivals){a.y=0;a.vy=0;a.landing=false;a.flight=false}}if(urlParams.has('advance'))window.__game.advance(+urlParams.get('advance'));if(urlParams.has('s'))p.s=+urlParams.get('s');if(urlParams.has('camera'))world.cameraMode=+urlParams.get('camera')}
+}
 // ?bench=1 (3.19.0): per-feature cost harness, see src/bench.js. Results go to window.__bench and a
 // downloaded JSON. NOT a benchmark when run under SwiftShader/headless containers (software rendering).
 if(urlParams.has('bench'))import('./bench.js').then(m=>m.runBench(window.__game,{measureMs:+urlParams.get('benchMs')||4000,warmupMs:+urlParams.get('benchWarmup')||1200,reps:+urlParams.get('benchReps')||3})).catch(e=>{console.error('bench failed',e);window.__benchError=String(e&&e.message||e)});

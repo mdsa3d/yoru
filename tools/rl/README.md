@@ -62,7 +62,7 @@ pro-only failed rookie contacts, rookie-only drained pace everywhere). With
 
 ## Outputs (tools/rl/out/ — NEVER assets/ai; promotion is a human decision)
 
-- `rival-policy-rl.json` — `neon-rash-mlp@1` weights of the final ES mean +
+- `rival-policy-rl.json` — `neon-rash-mlp@2` weights of the best validated ES mean +
   meta (algorithm, reward weights, held-out numbers).
 - `checkpoint.json` — resumable state (theta + Adam moments + config + curve).
 - `curve.jsonl` — one JSON line per generation: the true learning curve.
@@ -81,3 +81,15 @@ If the curve is flat, say so — do not promote.
   `tests/rl-env.test.mjs`).
 - `worker.mjs` — rollout worker.
 - `train.mjs` — CLI orchestrator, checkpointing, held-out eval, export.
+
+## Model selection
+
+The trainer evaluates the initial mean, every `--validate-every` generations
+(default 10), and the final mean on fixed `--validation-episodes` seeds (default
+6), at every configured tier. It exports the best validation mean, retaining
+its weights and generation in the resumable checkpoint. This prevents a
+regressing tail from replacing a better policy. Validation seeds (66,000,000+)
+are used for selection; final test seeds (77,000,000+) are evaluated only after
+selection. The separate 200-race-per-tier acceptance gate remains required
+before runtime promotion. Selection uses the existing average reward, so it
+does not guarantee every tier passes the gameplay bands.

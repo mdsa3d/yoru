@@ -77,6 +77,16 @@ Consequences, exactly as in the code today:
 
 Handoff notes and commands: `tools/ai-train/RESUME.md`.
 
+## Horizon retraining (2026-10-06)
+
+A fresh v2 BC/DAgger corpus (192 generated expert races, 531,930 frames) reached
+held-out imitation MSE 0.011538. A 20-generation multi-tier ES refinement selected
+its best validated mean at generation 10. The full 200-race-per-tier gate passed
+Elite, but failed Rookie contact/pace and Pro contact. **No new policy is shipped.**
+The trainer now retains the best validated mean across checkpoints/resume, and
+neural inference packs weights contiguously without changing outputs. Detailed
+commands, UI previews and reports: [Horizon upgrade](HORIZON-UPGRADE.md).
+
 ## Laya (optional local model)
 
 `npm run setup:laya` installs a CPU-only ONNX Runtime and `@receptron/laya@0.1.2`; `npm run start:laya` starts the server

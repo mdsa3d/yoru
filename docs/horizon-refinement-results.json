@@ -1,0 +1,84 @@
+{
+ "heldOutSeeds": [
+  77000000,
+  77000001,
+  77000002,
+  77000003,
+  77000004,
+  77000005,
+  77000006,
+  77000007,
+  77000008,
+  77000009,
+  77000010,
+  77000011
+ ],
+ "tiers": [
+  "rookie",
+  "pro",
+  "elite"
+ ],
+ "trained": {
+  "fitness": 83.31291357075227,
+  "metrics": {
+   "contacts": 0.6666666666666666,
+   "strikes": 0.6944444444444444,
+   "collisions": 0.7777777777777778,
+   "offRoadSteps": 0,
+   "healthLost": 0,
+   "rivalMaxV": 58.45638506916685,
+   "rivalS": 2238.7395059354744,
+   "playerS": 2831.3361189104344,
+   "steps": 5400,
+   "finished": 0,
+   "beatPlayer": 0,
+   "offRoadFrac": 0
+  }
+ },
+ "baseline": {
+  "fitness": 84.6958626101143,
+  "metrics": {
+   "contacts": 0.8333333333333334,
+   "strikes": 0.5,
+   "collisions": 0.75,
+   "offRoadSteps": 0,
+   "healthLost": 0,
+   "rivalMaxV": 59.35143728572906,
+   "rivalS": 2239.979898586191,
+   "playerS": 2819.488723379893,
+   "steps": 5400,
+   "finished": 0,
+   "beatPlayer": 0,
+   "offRoadFrac": 0
+  }
+ },
+ "perTier": {
+  "rookie": {
+   "trained": 85.26625116713815,
+   "baseline": 84.69586261011428
+  },
+  "pro": {
+   "trained": 81.91587460539132,
+   "baseline": 84.69586261011428
+  },
+  "elite": {
+   "trained": 82.75661493972733,
+   "baseline": 84.69586261011428
+  }
+ },
+ "selection": {
+  "generation": 10,
+  "fitness": 83.86515428812197,
+  "validationSeeds": [
+   66000000,
+   66000001,
+   66000002,
+   66000003,
+   66000004,
+   66000005
+  ]
+ },
+ "stepsPerSec": 5322,
+ "elapsedSeconds": 244,
+ "generations": 20
+}

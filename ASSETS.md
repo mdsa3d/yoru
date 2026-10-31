@@ -60,3 +60,27 @@ Bundled third-party components keep their own licenses (Three.js and webgl-noise
 
 ## Future Sketchfab imports
 Prefer CC0 or CC BY with clear original authorship. Record author, source URL, exact license, download date, modifications and attribution. Avoid NC/ND for this reusable build. A model license does not establish rights to manufacturer trademarks or ripped game content. Use official authorized downloads, then prepare GLB with named wheel pivots, metre scale, Y-up and nose toward -Z. Keep collision and gameplay capabilities separate from the visual mesh.
+
+## 3D showcase slice (2026-10-06)
+- Original project code: `src/studio.js`, `src/rider.js`, `src/terrain.js` and added
+  Kestrel mechanical meshes in `src/models.js`; covered by the project Apache-2.0 license.
+- No assets or source code copied from THREE.Terrain, JS-3D-Car or the Three.js car demo.
+- Studio reflections use the already vendored Three.js `RoomEnvironment` addon;
+  Three.js remains MIT licensed. The Kestrel chassis retains the CC0 provenance above.
+
+## Procedural Blender 3D Assets (2026-10-31 Realistic Simulation Overhaul)
+- Installed skill: `blender-3d-modeling`.
+- Generator scripts:
+  - `tools/blender/generate_motorcycle.py`: Combines the CC0 10k-triangle `fancy-motorcycle-source.obj` sculpted chassis with Blender-modeled inverted USD forks, CNC triple clamps, drilled front/rear brake rotors, radial calipers, rear sprocket/chain, trellis frame, 4-into-1 curved Bezier titanium exhaust headers, carbon muffler, twin LED projector headlights, reactive `brake-light`, and a 1st-person `cockpit` node.
+  - `tools/blender/generate_challengers.py`: Smooth multi-station lofted fairings, fuel tanks, tail sections, spoked/machined wheels, drilled brake rotors, model-specific engines (L-Twin, Inline-4, 45° finned V-Twin), curved 3D tubular exhaust headers, trellis frames, reactive `brake-light`, and 1st-person `cockpit` nodes for all 5 challenger bikes.
+  - `tools/blender/generate_human.py`: Sculpted anatomical rider exported with articulated component nodes (`torso`, `head`, `upper-arm`, `forearm`, `thigh`, `shin`, `elbow-pad`, `knee-pad`, `gauntlet`, `boot`) and PBR materials (`suit-fabric`, `armor-plating`, `visor-glow`, `neon-accent`, `leather-trim`).
+  - `tools/blender/generate_cars.py`: Contoured multi-station lofted vehicle bodies with pillars, glasshouse, side mirrors, spoilers, reactive `brake-light` bars, and 4 separate 5-spoke wheel nodes (`wheel-fl`, `wheel-fr`, `wheel-rl`, `wheel-rr`), plus an autonomous quad-ducted-fan eVTOL aerial vehicle (`drone.glb`) with spinning `rotor-0..3` nodes.
+  - `tools/blender/generate_world.py`: Space-frame truss highway gantry (`gantry.glb`), curtain-wall skyscraper tower (`tower.glb`), F-profile concrete Jersey barrier (`barrier.glb`), 3 realistic road debris nodes (`debris1` concrete/rebar slab, `debris2` wrecked radial tire/rim, `debris3` crushed cargo crate in `debris.glb`), and highway furniture (`streetlamp`, `pylon` in `props.glb`).
+- Produced assets:
+  - `assets/models/kestrel.glb`: Hero racing motorcycle (`chassis`, `front-wheel`, `rear-wheel`, `brake-light`, `cockpit`).
+  - `assets/models/bikes/{redline,ronin,ghost,outlaw,cafe}.glb`: All 5 distinct challenger motorcycle silhouettes (`chassis`, `front-wheel`, `rear-wheel`, `brake-light`, `cockpit`).
+  - `assets/models/rider/pilot.glb`: Articulated humanoid motorcycle pilot in armored racing suit with glowing HUD visor.
+  - `assets/models/traffic/{sedan,van,taxi,drone}.glb`: Highway traffic vehicles with rotating wheel pivots and quad-rotor eVTOL aerial drone.
+  - `assets/models/world/{gantry,tower,barrier,debris,props}.glb`: Highway truss gantry, curtain-wall tower, Jersey barrier, multi-variant road debris, streetlamp, and concrete suspension pylon.
+- Reproduction: run `blender --background --python tools/blender/<script>.py`.
+

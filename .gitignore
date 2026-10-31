@@ -19,3 +19,6 @@ telemetry/rival-policy-es-pro.json
 telemetry/rival-policy-es-rookie.json
 telemetry/rival-policy-es-mt2.json
 telemetry/rival-policy-es-mt3.json
+
+# Local full-race Horizon gate (reviewable copy is in docs/)
+telemetry/horizon-acceptance.json
